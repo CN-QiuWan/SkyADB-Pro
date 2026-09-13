@@ -1,0 +1,60 @@
+name: Bug反馈
+description: 提交错误、异常行为或功能问题
+title: "[Bug] "
+labels:
+  - bug
+
+body:
+  - type: input
+    id: skyadb_android
+    attributes:
+      label: 运行skyadb的设备信息
+      description: 运行 skyadb 的设备品牌、型号，以及安卓版本
+      placeholder: "例如：小米14，Android 15"
+    validations:
+      required: true
+
+  - type: input
+    id: target_device
+    attributes:
+      label: 目标设备信息
+      description: 被控制目标设备的品牌、型号，以及安卓版本
+      placeholder: "例如：小米电视，Android 11"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 诊断日志
+      description: 请复制「设置 → 诊断日志」页面右上角复制按钮获取的内容
+      placeholder: |
+        请粘贴完整日志内容
+
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: 错误截图
+      description: 如有报错页面、异常提示等，请上传截图
+      placeholder: 将截图直接拖拽到这里
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 请尽量详细描述如何触发该问题
+      placeholder: |
+        1. 打开 ...
+        2. 点击 ...
+        3. 出现错误 ...
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你认为应该出现什么结果
+      placeholder: 正常情况下应该...

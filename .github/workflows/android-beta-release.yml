@@ -1,0 +1,142 @@
+name: Android 测试版发布
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "基础版本标签，流水线会自动追加 -beta 后缀。"
+        required: true
+        default: "v1.0.0"
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build:
+    name: 构建并发布测试版
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: 配置 JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: 配置 Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: 安装 Android SDK 组件
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: 配置 Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.5.1"
+
+      - name: 解码发布签名密钥
+        env:
+          SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_KEY_BASE64}" || -z "${KEY_ALIAS}" || -z "${KEY_STORE_PASSWORD}" || -z "${KEY_PASSWORD}" ]]; then
+            echo "缺少发布签名密钥，请配置 SIGNING_KEY_BASE64、KEY_ALIAS、KEY_STORE_PASSWORD、KEY_PASSWORD。" >&2
+            exit 1
+          fi
+          mkdir -p "${RUNNER_TEMP}/signing"
+          echo "${SIGNING_KEY_BASE64}" | base64 --decode > "${RUNNER_TEMP}/signing/release.p12"
+
+      - name: 运行单元测试
+        run: gradle --no-daemon testDebugUnitTest
+
+      - name: 运行 Android Lint
+        run: gradle --no-daemon lintRelease
+
+      - name: 构建 Release APK
+        env:
+          VERSION_NAME: ${{ inputs.tag }}
+          SIGNING_STORE_FILE: ${{ runner.temp }}/signing/release.p12
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          BASE_TAG="$(echo "${VERSION_NAME}" | xargs)"
+          RELEASE_TAG="${BASE_TAG%-beta}-beta"
+          if [[ ! "${RELEASE_TAG}" =~ ^v ]]; then
+            echo "测试版标签必须以 v 开头，例如 v1.0.0-beta。" >&2
+            exit 1
+          fi
+          VERSION_NAME="${RELEASE_TAG#v}"
+          if [[ ! "${VERSION_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-beta$ ]]; then
+            echo "测试版标签必须是 v主版本.次版本.修订版本，流水线会自动追加 -beta，例如 v1.0.0-beta。" >&2
+            exit 1
+          fi
+          BASE_VERSION="${VERSION_NAME%-beta}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE_VERSION}"
+          VERSION_CODE=$(((MAJOR * 10000 + MINOR * 100 + PATCH) * 10 + 1))
+          export VERSION_NAME VERSION_CODE
+          gradle --no-daemon assembleRelease
+
+      - name: 发布测试版 APK 到 GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG_INPUT: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          BASE_TAG="$(echo "${RELEASE_TAG_INPUT}" | xargs)"
+          if [[ -z "${BASE_TAG}" ]]; then
+            echo "版本标签不能为空。" >&2
+            exit 1
+          fi
+
+          RELEASE_TAG="${BASE_TAG%-beta}-beta"
+          RELEASE_TITLE="skyadb ${RELEASE_TAG}"
+          APK_PATH="$(find app/build/outputs/apk/release -name '*.apk' | head -n 1)"
+          RELEASE_APK="${RUNNER_TEMP}/skyadb-${RELEASE_TAG}.apk"
+          cp "${APK_PATH}" "${RELEASE_APK}"
+
+          PREVIOUS_TAG="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
+          if [[ -n "${PREVIOUS_TAG}" ]]; then
+            RANGE="${PREVIOUS_TAG}..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+
+          CHANGELOG="$(git log "${RANGE}" --no-merges --pretty=format:'%s%x09%h' | awk -F '\t' '!seen[$1]++ { printf "- %s (%s)\n", $1, $2 }' || true)"
+          if [[ -z "${CHANGELOG}" ]]; then
+            CHANGELOG="- 本次测试版未检测到新的提交记录。"
+          fi
+
+          RELEASE_NOTES="$(mktemp)"
+          {
+            echo "## 测试版更新记录"
+            echo
+            echo "${CHANGELOG}"
+          } > "${RELEASE_NOTES}"
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release edit "${RELEASE_TAG}" \
+              --title "${RELEASE_TITLE}" \
+              --notes-file "${RELEASE_NOTES}" \
+              --prerelease
+            gh release upload "${RELEASE_TAG}" "${RELEASE_APK}" --clobber
+          else
+            gh release create "${RELEASE_TAG}" "${RELEASE_APK}" \
+              --title "${RELEASE_TITLE}" \
+              --notes-file "${RELEASE_NOTES}" \
+              --prerelease
+          fi

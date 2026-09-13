@@ -146,4 +146,19 @@ export KEY_PASSWORD=password
 
 ## 开源协议 / License
 
-[GPL-3.0](LICENSE)
+[![GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+
+本项目基于 [SkyADB](https://github.com/sky22333/skyadb) 进行优化改进，遵循 **GNU General Public License v3.0**（GPL-3.0）规范许可证发布。
+
+- **SPDX 标识**：`GPL-3.0-only`
+- **版权声明**：
+  - Copyright (C) 2026 github.com/sky22333 (SkyADB)
+  - Copyright (C) 2026 CN-QiuWan (SkyADBPro)
+- **许可要点**：
+  - 你可以自由使用、修改、分发本软件；
+  - 分发时必须保留版权声明与本许可证全文；
+  - 修改后的衍生作品必须以 GPL-3.0 相同的许可协议开源；
+  - 本项目不提供任何担保。
+
+完整许可条款见 [LICENSE](LICENSE) 文件。
+

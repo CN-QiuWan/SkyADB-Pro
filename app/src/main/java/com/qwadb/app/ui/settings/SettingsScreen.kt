@@ -350,7 +350,7 @@ private fun SettingsContent(
                     SettingBlock(
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         title = stringResource(R.string.settings_project_url_title),
-                        description = "CN-QiuWan/skyadbCustomized-version",
+                        description = "CN-QiuWan/SkyADB-Pro",
                         onClick = { uriHandler.openUri(ProjectUrl) },
                     )
                 }
@@ -359,7 +359,7 @@ private fun SettingsContent(
     }
 }
 
-private const val ProjectUrl = "https://github.com/CN-QiuWan/skyadbCustomized-version"
+private const val ProjectUrl = "https://github.com/CN-QiuWan/SkyADB-Pro"
 
 /** 画质参数输入项：标签 + 说明 + 输入框。 */
 @Composable

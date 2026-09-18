@@ -75,6 +75,8 @@
     <string name="settings_clear_recent_devices_title">清理最近设备</string>
     <string name="settings_clear_recent_devices_desc">移除连接历史</string>
     <string name="settings_project_url_title">项目地址</string>
+    <string name="settings_contact_title">联系方式</string>
+    <string name="settings_contact_desc">QQ：3948501479</string>
     <string name="settings_status_refresh_title">状态刷新间隔</string>
     <string name="settings_status_refresh_desc">系统状态更新间隔（500-10000ms）</string>
     <string name="settings_status_refresh_required">请输入刷新间隔</string>

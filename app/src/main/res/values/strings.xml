@@ -75,6 +75,8 @@
     <string name="settings_clear_recent_devices_title">Clear recent devices</string>
     <string name="settings_clear_recent_devices_desc">Remove connection history</string>
     <string name="settings_project_url_title">Project URL</string>
+    <string name="settings_contact_title">Contact</string>
+    <string name="settings_contact_desc">qiuwanup@gmail.com</string>
     <string name="settings_status_refresh_title">Status refresh interval</string>
     <string name="settings_status_refresh_desc">Update interval for system status (500-10000ms)</string>
     <string name="settings_status_refresh_required">Enter the refresh interval</string>

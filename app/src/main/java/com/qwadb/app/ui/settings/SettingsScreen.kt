@@ -1,5 +1,7 @@
 package com.qwadb.app.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.SettingsEthernet
 import androidx.compose.material.icons.outlined.Speed
@@ -34,6 +37,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -110,6 +115,8 @@ private fun SettingsContent(
     onInstallUpdateClick: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
+    val isChineseLocale = LocalConfiguration.current.locales[0].language.startsWith("zh", ignoreCase = true)
     val currentVersionLabel = stringResource(R.string.settings_update_current_version, uiState.currentVersion)
     val updateStatusText = when (val status = uiState.updateStatus) {
         UpdateCheckStatus.Idle -> currentVersionLabel
@@ -428,6 +435,22 @@ private fun SettingsContent(
                         description = "CN-QiuWan/SkyADB-Pro",
                         onClick = { uriHandler.openUri(ProjectUrl) },
                     )
+                    SettingBlock(
+                        icon = Icons.Outlined.Email,
+                        title = stringResource(R.string.settings_contact_title),
+                        description = stringResource(R.string.settings_contact_desc),
+                        onClick = {
+                            if (isChineseLocale) {
+                                uriHandler.openUri(QqContactUrl)
+                            } else {
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$ContactEmail")),
+                                    )
+                                }
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -435,6 +458,8 @@ private fun SettingsContent(
 }
 
 private const val ProjectUrl = "https://github.com/CN-QiuWan/SkyADB-Pro"
+private const val QqContactUrl = "https://qm.qq.com/q/nYEpLh7iKs"
+private const val ContactEmail = "qiuwanup@gmail.com"
 
 /** 画质参数输入项：标签 + 说明 + 输入框。 */
 @Composable

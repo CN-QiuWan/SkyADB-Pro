@@ -393,17 +393,28 @@ class SettingsViewModel(
     private fun fallbackApkUrl(version: String): String =
         "https://github.com/CN-QiuWan/SkyADB-Pro/releases/download/v$version/SkyADB-Pro-$version-release.apk"
 
-    /** 简单版本号比较：按 '.' 分段比较数字，candidate > current 返回 true。 */
+    /**
+     * 简单版本号比较：按 '.' 分段比较数字，candidate > current 返回 true。
+     * 兼容预发布后缀（如 0.2.2-1）：主版本按数字比较，主版本相同时带后缀的视为更旧。
+     */
     private fun isNewerVersion(candidate: String, current: String): Boolean {
-        val a = candidate.split('.').mapNotNull { it.toIntOrNull() }
-        val b = current.split('.').mapNotNull { it.toIntOrNull() }
-        val maxLen = maxOf(a.size, b.size)
+        val (cMain, cSuffix) = splitVersion(candidate)
+        val (bMain, bSuffix) = splitVersion(current)
+        val maxLen = maxOf(cMain.size, bMain.size)
         for (i in 0 until maxLen) {
-            val av = a.getOrElse(i) { 0 }
-            val bv = b.getOrElse(i) { 0 }
+            val av = cMain.getOrElse(i) { 0 }
+            val bv = bMain.getOrElse(i) { 0 }
             if (av != bv) return av > bv
         }
-        return false
+        return cSuffix.isEmpty() && bSuffix.isNotEmpty()
+    }
+
+    /** 把 "0.2.2-1" 拆成主版本数字段 [0,2,2] 与后缀 "-1"。 */
+    private fun splitVersion(version: String): Pair<List<Int>, String> {
+        val dashIndex = version.indexOf('-')
+        val main = if (dashIndex >= 0) version.substring(0, dashIndex) else version
+        val suffix = if (dashIndex >= 0) version.substring(dashIndex) else ""
+        return main.split('.').mapNotNull { it.toIntOrNull() } to suffix
     }
 
     private fun updateTimeout(

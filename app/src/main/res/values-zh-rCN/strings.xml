@@ -81,6 +81,30 @@
     <string name="settings_status_refresh_range">范围应为 500-10000 毫秒</string>
     <string name="unit_ms">毫秒</string>
 
+    <!-- Update check -->
+    <string name="settings_update_check_title">检查更新</string>
+    <string name="settings_update_check_desc">检查 GitHub Releases 是否有新版本</string>
+    <string name="settings_update_current_version">当前版本：v%1$s</string>
+    <string name="settings_update_checking">正在检查更新\u2026</string>
+    <string name="settings_update_latest">已是最新版本</string>
+    <string name="settings_update_available">发现新版本 v%1$s</string>
+    <string name="settings_update_open_release">打开发布页</string>
+    <string name="settings_update_download">下载更新</string>
+    <string name="settings_update_downloading">正在下载更新（%1$d%%）</string>
+    <string name="settings_update_downloaded">更新已下载，点击安装</string>
+    <string name="settings_update_install">安装更新</string>
+    <string name="settings_update_failed">检查更新失败</string>
+    <string name="settings_update_failed_hint">请检查网络连接后重试。</string>
+    <string name="settings_update_download_failed">下载更新失败，请稍后重试。</string>
+
+    <!-- QR share -->
+    <string name="qr_share_title">分享连接</string>
+    <string name="qr_share_desc">扫码连接设备</string>
+    <string name="qr_generate_failed">二维码生成失败</string>
+    <string name="qr_share_close">关闭</string>
+    <string name="qr_no_connection">当前没有可分享的连接</string>
+    <string name="qr_connection_format">adb connect %1$s:%2$d</string>
+
     <!-- Home screen -->
     <string name="home_title">设备连接</string>
     <string name="action_disconnect">断开连接</string>
@@ -880,4 +904,51 @@
     <string name="status_brightness_format">%1$d / 255（%2$d%%）</string>
     <string name="status_processes_format">%1$d 个进程</string>
     <string name="status_services_format">%1$d 个服务</string>
+
+    <!-- 应用批量操作 -->
+    <string name="apps_select_mode_desc">进入多选模式</string>
+    <string name="apps_batch_uninstall">批量卸载</string>
+    <string name="apps_batch_export">批量导出</string>
+    <string name="apps_batch_cancel">取消多选</string>
+    <string name="apps_selected_count">已选 %1$d 个</string>
+    <string name="apps_batch_uninstall_title">卸载选中的 %1$d 个应用？</string>
+    <string name="apps_batch_uninstall_message">选中的应用将从目标设备移除。</string>
+    <string name="apps_batch_export_title">导出选中的 %1$d 个应用？</string>
+    <string name="apps_batch_export_message">选中的 APK 文件将保存到下载目录。</string>
+    <string name="apps_batch_processing">正在处理 %1$d/%2$d</string>
+    <string name="apps_batch_complete">批量操作完成：%1$d 个成功，%2$d 个失败</string>
+
+    <!-- 遥控器自定义按键 -->
+    <string name="remote_custom_keys_title">自定义按键</string>
+    <string name="remote_add_custom_key">添加自定义按键</string>
+    <string name="remote_custom_key_hint">用逗号分隔按键名，例如 HOME,HOME 或 POWER,VOLUME_DOWN</string>
+    <string name="remote_custom_key_label">自定义按键</string>
+    <string name="remote_custom_key_saved">自定义按键已保存</string>
+    <string name="remote_custom_key_invalid">按键名称或组合无效</string>
+    <string name="remote_clear_custom_keys">清空自定义按键</string>
+    <string name="remote_delete_custom_key">删除</string>
+    <string name="remote_custom_key_empty">暂无自定义按键</string>
+
+    <!-- Shell 命令收藏 -->
+    <string name="shell_favorites_title">收藏</string>
+    <string name="shell_add_favorite">加入收藏</string>
+    <string name="shell_remove_favorite">取消收藏</string>
+    <string name="shell_no_favorites">暂无收藏命令</string>
+    <string name="shell_favorite_added">已加入收藏</string>
+    <string name="shell_favorite_removed">已取消收藏</string>
+    <string name="shell_favorites_hint">点击星标可收藏常用命令</string>
+
+    <!-- 文件多选传输 -->
+    <string name="files_select_all_desc">全选</string>
+    <string name="files_upload_selected">上传选中项</string>
+    <string name="files_download_selected">下载选中项</string>
+    <string name="files_transfering">正在传输 %1$d 项</string>
+
+    <!-- 断点续传 -->
+    <string name="download_resume">继续下载</string>
+    <string name="download_resuming">正在继续下载\u2026</string>
+    <string name="download_cannot_resume">服务器不支持断点续传</string>
+    <string name="download_file_exists">文件已存在，是否继续下载？</string>
+    <string name="download_file_exists_yes">继续</string>
+    <string name="download_file_exists_no">重新下载</string>
 </resources>

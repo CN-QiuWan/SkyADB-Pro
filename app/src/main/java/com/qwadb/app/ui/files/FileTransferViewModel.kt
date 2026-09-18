@@ -17,6 +17,7 @@ import com.qwadb.app.repository.AdbRepository
 import com.qwadb.app.validation.DevicePathValidator
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -56,6 +57,7 @@ data class FileTransferUiState(
     val renameInput: String = "",
     val renameError: String? = null,
     val operationStatus: OperationStatus = OperationStatus.Idle,
+    val transferTotal: Int = 0,
     val needsStoragePermission: Boolean = false,
 ) {
     fun pane(id: FilePaneId): FilePaneState = if (id == FilePaneId.Local) local else remote
@@ -133,6 +135,17 @@ class FileTransferViewModel(
 
     fun clearSelection() {
         state.value = state.value.copy(selectedPaths = emptySet())
+    }
+
+    fun toggleSelectAll() {
+        val current = state.value
+        val files = current.active.entries.filter { !it.isDirectory }
+        if (files.isEmpty()) return
+        val allSelected = files.all { it.path in current.selectedPaths }
+        state.value = current.copy(
+            selectedPaths = if (allSelected) emptySet() else files.map { it.path }.toSet(),
+            operationStatus = OperationStatus.Idle,
+        )
     }
 
     fun openEntry(pane: FilePaneId, entry: RemoteFileEntry) {
@@ -435,6 +448,7 @@ class FileTransferViewModel(
             return
         }
         transferJob?.cancel()
+        state.value = state.value.copy(transferTotal = files.size)
         transferJob = viewModelScope.launch {
             try {
                 when (current.activePane) {
@@ -444,7 +458,7 @@ class FileTransferViewModel(
                             pushLocalFile(entry, current.remote.path, index + 1, files.size)
                         }
                         publishStatus(OperationStatus.Success(appString(R.string.files_uploaded_count, files.size)))
-                        state.value = state.value.copy(selectedPaths = emptySet())
+                        state.value = state.value.copy(selectedPaths = emptySet(), transferTotal = 0)
                         loadPane(FilePaneId.Remote, current.remote.path)
                     }
                     FilePaneId.Remote -> {
@@ -453,12 +467,15 @@ class FileTransferViewModel(
                             pullRemoteFile(entry, current.local.path, index + 1, files.size)
                         }
                         publishStatus(OperationStatus.Success(appString(R.string.files_downloaded_count, files.size)))
-                        state.value = state.value.copy(selectedPaths = emptySet())
+                        state.value = state.value.copy(selectedPaths = emptySet(), transferTotal = 0)
                         loadPane(FilePaneId.Local, current.local.path)
                     }
                 }
             } catch (_: CancellationException) {
                 publishStatus(OperationStatus.Success(appString(R.string.files_transfer_canceled)))
+                if (transferJob == coroutineContext[Job]) {
+                    state.value = state.value.copy(transferTotal = 0)
+                }
             } catch (error: Throwable) {
                 publishStatus(
                     OperationStatus.Failed(
@@ -466,6 +483,9 @@ class FileTransferViewModel(
                         error.message ?: appString(R.string.files_check_connection_hint),
                     ),
                 )
+                if (transferJob == coroutineContext[Job]) {
+                    state.value = state.value.copy(transferTotal = 0)
+                }
             }
         }
     }

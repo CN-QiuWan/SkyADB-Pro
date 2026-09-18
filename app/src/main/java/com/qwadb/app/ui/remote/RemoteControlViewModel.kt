@@ -1,5 +1,6 @@
 package com.qwadb.app.ui.remote
 
+import android.view.KeyEvent
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +11,9 @@ import com.qwadb.app.i18n.appString
 import com.qwadb.app.model.AdbOperationResult
 import com.qwadb.app.model.OperationStatus
 import com.qwadb.app.repository.AdbRepository
+import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +21,9 @@ import kotlinx.coroutines.launch
 
 data class RemoteControlUiState(
     val status: OperationStatus = OperationStatus.Idle,
+    val customKeys: List<String> = emptyList(),
+    val customKeyInput: String = "",
+    val customKeyError: String? = null,
 )
 
 enum class RemoteKey(@param:StringRes val labelRes: Int, val keyCode: String) {
@@ -71,6 +78,99 @@ class RemoteControlViewModel(
                 }
             }
         }
+    }
+
+    fun onCustomKeyInputChanged(value: String) {
+        state.value = state.value.copy(customKeyInput = value, customKeyError = null)
+    }
+
+    fun addCustomKey(sequence: String) {
+        val trimmed = sequence.trim()
+        if (parseKeyCodeSequence(trimmed).isEmpty()) {
+            state.value = state.value.copy(customKeyError = appString(R.string.remote_custom_key_invalid))
+            return
+        }
+        val canonical = trimmed.split(",").joinToString(",") { it.trim().uppercase(Locale.ROOT) }
+        val current = state.value
+        if (current.customKeys.contains(canonical) || current.customKeys.size >= MaxCustomKeys) {
+            state.value = current.copy(customKeyError = appString(R.string.remote_custom_key_invalid))
+            return
+        }
+        state.value = current.copy(
+            customKeys = current.customKeys + canonical,
+            customKeyInput = "",
+            customKeyError = null,
+            status = OperationStatus.Success(appString(R.string.remote_custom_key_saved)),
+        )
+    }
+
+    fun removeCustomKey(sequence: String) {
+        state.value = state.value.copy(
+            customKeys = state.value.customKeys.filterNot { it == sequence },
+        )
+    }
+
+    fun clearCustomKeys() {
+        state.value = state.value.copy(customKeys = emptyList())
+    }
+
+    fun sendCustomKey(sequence: String) {
+        val keyCodes = parseKeyCodeSequence(sequence)
+        if (keyCodes.isEmpty()) return
+        state.value = state.value.copy(
+            status = OperationStatus.Running(appString(R.string.remote_sending, sequence)),
+        )
+        viewModelScope.launch {
+            for (keyCode in keyCodes) {
+                ensureActive()
+                when (val result = adbRepository.runShell("input keyevent $keyCode")) {
+                    is AdbOperationResult.Success -> {
+                        if (result.data.exitCode != 0) {
+                            state.value = state.value.copy(
+                                status = OperationStatus.Failed(
+                                    text = appString(R.string.remote_send_failed),
+                                    suggestion = result.data.errorOutput
+                                        .toRemoteInputSuggestion()
+                                        .resolve(AppServices.context),
+                                ),
+                            )
+                            return@launch
+                        }
+                    }
+                    is AdbOperationResult.Failure -> {
+                        state.value = state.value.copy(
+                            status = OperationStatus.Failed(result.message, result.suggestion),
+                        )
+                        return@launch
+                    }
+                }
+                delay(KeySendDelayMillis)
+            }
+            state.value = state.value.copy(
+                status = OperationStatus.Success(appString(R.string.remote_sent, sequence)),
+            )
+        }
+    }
+
+    /** Maps a key name (case-insensitive, e.g. "HOME") to its KeyEvent keycode, or null if unknown. */
+    fun parseKeyCode(name: String): Int? {
+        val key = RemoteKey.entries.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) }
+            ?: return null
+        return runCatching {
+            KeyEvent::class.java.getField(key.keyCode).getInt(null)
+        }.getOrNull()
+    }
+
+    private fun parseKeyCodeSequence(sequence: String): List<Int> {
+        val names = sequence.split(",").map { it.trim() }
+        if (names.isEmpty() || names.any { it.isEmpty() }) return emptyList()
+        val codes = names.mapNotNull { parseKeyCode(it) }
+        return if (codes.size == names.size) codes else emptyList()
+    }
+
+    private companion object {
+        const val MaxCustomKeys = 10
+        const val KeySendDelayMillis = 100L
     }
 }
 

@@ -17,13 +17,16 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.SettingsEthernet
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import com.qwadb.app.ui.components.AppTopBar as TopAppBar
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.runtime.Composable
@@ -51,6 +54,7 @@ import com.qwadb.app.R
 fun SettingsScreen(
     bottomPadding: Dp = 0.dp,
     onDiagnosticsClick: () -> Unit = {},
+    onCheckForUpdatesClick: (() -> Unit)? = null,
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -74,6 +78,9 @@ fun SettingsScreen(
         onLanguageSelected = viewModel::onLanguageSelected,
         onClearRecentDevicesClicked = viewModel::onClearRecentDevicesClicked,
         onDiagnosticsClick = onDiagnosticsClick,
+        onCheckForUpdatesClick = onCheckForUpdatesClick ?: viewModel::checkForUpdates,
+        onDownloadUpdateClick = viewModel::downloadUpdate,
+        onInstallUpdateClick = viewModel::installDownloadedUpdate,
     )
 }
 
@@ -98,8 +105,24 @@ private fun SettingsContent(
     onLanguageSelected: (AppLanguage) -> Unit,
     onClearRecentDevicesClicked: () -> Unit,
     onDiagnosticsClick: () -> Unit,
+    onCheckForUpdatesClick: () -> Unit,
+    onDownloadUpdateClick: () -> Unit,
+    onInstallUpdateClick: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
+    val currentVersionLabel = stringResource(R.string.settings_update_current_version, uiState.currentVersion)
+    val updateStatusText = when (val status = uiState.updateStatus) {
+        UpdateCheckStatus.Idle -> currentVersionLabel
+        UpdateCheckStatus.Checking -> stringResource(R.string.settings_update_checking)
+        UpdateCheckStatus.Latest -> stringResource(R.string.settings_update_latest)
+        is UpdateCheckStatus.UpdateAvailable -> stringResource(R.string.settings_update_available, status.latestVersion)
+        UpdateCheckStatus.Failed -> stringResource(R.string.settings_update_failed)
+    }
+    val updateDescription = if (uiState.updateStatus is UpdateCheckStatus.Idle) {
+        updateStatusText
+    } else {
+        "$currentVersionLabel · $updateStatusText"
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(R.string.settings_title)) })
@@ -331,6 +354,58 @@ private fun SettingsContent(
             item {
                 SettingGroupCard {
                     SettingBlock(
+                        icon = Icons.Outlined.SystemUpdate,
+                        title = stringResource(R.string.settings_update_check_title),
+                        description = updateDescription,
+                        onClick = onCheckForUpdatesClick,
+                    ) {
+                        when (val download = uiState.updateDownload) {
+                            UpdateDownloadStatus.Idle -> Unit
+                            is UpdateDownloadStatus.Downloading -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    LinearProgressIndicator(
+                                        progress = { download.progress },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Text(
+                                        text = stringResource(
+                                            R.string.settings_update_downloading,
+                                            (download.progress * 100).toInt(),
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            }
+                            is UpdateDownloadStatus.Downloaded -> {
+                                TextButton(onClick = onInstallUpdateClick) {
+                                    Text(stringResource(R.string.settings_update_install))
+                                }
+                            }
+                            UpdateDownloadStatus.Failed -> {
+                                Text(
+                                    text = stringResource(R.string.settings_update_download_failed),
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                TextButton(onClick = onDownloadUpdateClick) {
+                                    Text(stringResource(R.string.settings_update_download))
+                                }
+                            }
+                        }
+                        if (uiState.updateStatus is UpdateCheckStatus.UpdateAvailable &&
+                            uiState.updateDownload is UpdateDownloadStatus.Idle
+                        ) {
+                            TextButton(onClick = onDownloadUpdateClick) {
+                                Text(stringResource(R.string.settings_update_download))
+                            }
+                        }
+                    }
+                    SettingBlock(
                         icon = Icons.Outlined.BugReport,
                         title = stringResource(R.string.settings_diagnostics_title),
                         description = stringResource(R.string.settings_diagnostics_desc),
@@ -417,6 +492,9 @@ private fun SettingsContentPreview() {
             onLanguageSelected = {},
             onClearRecentDevicesClicked = {},
             onDiagnosticsClick = {},
+            onCheckForUpdatesClick = {},
+            onDownloadUpdateClick = {},
+            onInstallUpdateClick = {},
         )
     }
 }

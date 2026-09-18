@@ -6,6 +6,7 @@ import com.qwadb.app.AppServices
 import com.qwadb.app.R
 import com.qwadb.app.adb.AdbSessionKind
 import com.qwadb.app.i18n.appString
+import com.qwadb.app.model.AdbDevice
 import com.qwadb.app.model.AdbOperationResult
 import com.qwadb.app.model.ConnectionState
 import com.qwadb.app.model.DeviceInfo
@@ -24,6 +25,7 @@ data class DeviceUiState(
     val refreshing: Boolean = false,
     val refreshStatus: OperationStatus = OperationStatus.Idle,
     val infoExpanded: Boolean = false,
+    val connectionAddress: String? = null,
 )
 
 class DeviceViewModel(
@@ -47,6 +49,7 @@ class DeviceViewModel(
                         deviceName = connected.name,
                         connectionState = connected.connectionState,
                         sessionKind = adbRepository.sessionKind(),
+                        connectionAddress = currentConnectionAddress(connected),
                     )
                 } else {
                     state.value = state.value.copy(
@@ -56,10 +59,21 @@ class DeviceViewModel(
                         info = DeviceInfo(),
                         refreshing = false,
                         refreshStatus = OperationStatus.Idle,
+                        connectionAddress = null,
                     )
                 }
             }
         }
+    }
+
+    /** 当前可分享的 adb connect 地址（仅 WiFi 会话），格式 host:port。 */
+    private fun currentConnectionAddress(connected: AdbDevice): String? {
+        if (adbRepository.sessionKind() != AdbSessionKind.Wifi) return null
+        return AppServices.kadbManager.currentEndpoint()
+            ?.takeIf { it.contains(":") }
+            ?: connected.host.takeIf { it.isNotBlank() }?.let { host ->
+                connected.port.takeIf { it > 0 }?.let { port -> "$host:$port" }
+            }
     }
 
     fun toggleInfoExpanded() {

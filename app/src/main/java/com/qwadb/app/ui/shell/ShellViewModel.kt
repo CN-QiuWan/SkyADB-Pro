@@ -18,6 +18,7 @@ data class ShellUiState(
     val command: String = "",
     val output: String = "",
     val history: List<String> = emptyList(),
+    val favorites: List<String> = emptyList(),
     val operationStatus: OperationStatus = OperationStatus.Idle,
     val executeEnabled: Boolean = false,
 )
@@ -40,6 +41,29 @@ class ShellViewModel(
         onCommandChanged(command)
     }
 
+    fun toggleFavorite(command: String) {
+        val trimmed = command.trim()
+        if (trimmed.isBlank()) return
+        val current = state.value.favorites
+        state.value = if (trimmed in current) {
+            state.value.copy(
+                favorites = current - trimmed,
+                operationStatus = OperationStatus.Success(appString(R.string.shell_favorite_removed)),
+            )
+        } else {
+            state.value.copy(
+                favorites = (current + trimmed).distinct().take(20),
+                operationStatus = OperationStatus.Success(appString(R.string.shell_favorite_added)),
+            )
+        }
+    }
+
+    fun onFavoriteClick(command: String) {
+        val trimmed = command.trim()
+        if (trimmed.isBlank()) return
+        execute(trimmed)
+    }
+
     fun onExecuteClick() {
         val command = state.value.command.trim()
         if (command.isBlank()) {
@@ -52,7 +76,10 @@ class ShellViewModel(
             )
             return
         }
+        execute(command)
+    }
 
+    private fun execute(command: String) {
         state.value = state.value.copy(
             executeEnabled = false,
             operationStatus = OperationStatus.Running(appString(R.string.shell_executing, command)),

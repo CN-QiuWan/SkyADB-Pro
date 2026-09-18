@@ -5,6 +5,7 @@ import com.qwadb.app.R
 import com.qwadb.app.i18n.appString
 import com.qwadb.app.validation.DownloadInputValidator
 import java.io.File
+import java.io.FileOutputStream
 import java.net.URLDecoder
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
@@ -32,9 +33,21 @@ class NetworkDownloadManager(
         canceled = true
     }
 
+    /** Returns the existing non-empty partial (.part) file for the URL, or null when there is nothing to resume. */
+    fun partialDownloadFile(url: String, preferredFileName: String? = null): File? {
+        val partFile = File(downloadDir(), "${baseFileName(url, preferredFileName)}.part")
+        return partFile.takeIf { it.isFile() && it.length() > 0L }
+    }
+
+    fun deletePartialDownload(url: String, preferredFileName: String? = null) {
+        val partFile = File(downloadDir(), "${baseFileName(url, preferredFileName)}.part")
+        runCatching { partFile.delete() }
+    }
+
     suspend fun download(
         url: String,
         preferredFileName: String? = null,
+        resume: Boolean = false,
         onProgress: (DownloadTask) -> Unit,
     ): DownloadResult = withContext(Dispatchers.IO) {
         canceled = false
@@ -47,7 +60,19 @@ class NetworkDownloadManager(
         }
 
         runCatching {
-            val request = Request.Builder().url(url).get().build()
+            val downloadDir = downloadDir()
+            cleanupDownloadDir(downloadDir)
+
+            val baseName = baseFileName(url, preferredFileName)
+            val partFile = File(downloadDir, "$baseName.part")
+            val existingBytes = if (resume) partFile.length().takeIf { it > 0L } else null
+
+            val requestBuilder = Request.Builder().url(url)
+            if (existingBytes != null) {
+                requestBuilder.header("Range", "bytes=$existingBytes-")
+            }
+            val request = requestBuilder.get().build()
+
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     return@withContext DownloadResult.Failure(
@@ -56,36 +81,41 @@ class NetworkDownloadManager(
                     )
                 }
 
-                val body = response.body
+                val append = existingBytes != null && response.code == 206
+                if (existingBytes != null && !append) {
+                    // Server replied 200: resuming is unsupported, restart from scratch.
+                    partFile.delete()
+                }
 
                 val fileName = preferredFileName
                     ?.takeIf { it.isNotBlank() }
                     ?: response.header("Content-Disposition")?.let(::fileNameFromContentDisposition)
                     ?: fileNameFromUrl(url)
-                    ?: "download-${System.currentTimeMillis()}"
-
-                val downloadDir = downloadDir()
-                cleanupDownloadDir(downloadDir)
+                    ?: baseName
                 val targetFile = File(downloadDir, fileName)
                 targetFile.parentFile?.mkdirs()
+                partFile.parentFile?.mkdirs()
 
-                val totalBytes = body.contentLength().takeIf { it > 0L } ?: -1L
-                var downloadedBytes = 0L
+                val body = response.body
+                val startBytes = if (append) existingBytes ?: 0L else 0L
+                val totalBytes = body.contentLength().takeIf { it > 0L }?.let { it + startBytes } ?: -1L
+                var downloadedBytes = startBytes
                 var lastProgressAt = 0L
 
                 try {
                     body.byteStream().use { input ->
-                        targetFile.outputStream().use { output ->
+                        val output = FileOutputStream(partFile, append)
+                        output.use { out ->
                             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                             while (true) {
                                 ensureActive()
                                 if (canceled) {
-                                    targetFile.delete()
+                                    // Keep the partial file so the download can be resumed later.
                                     return@withContext DownloadResult.Canceled
                                 }
                                 val read = input.read(buffer)
                                 if (read == -1) break
-                                output.write(buffer, 0, read)
+                                out.write(buffer, 0, read)
                                 downloadedBytes += read
 
                                 val progress = if (totalBytes > 0L) {
@@ -101,7 +131,7 @@ class NetworkDownloadManager(
                                             url = url,
                                             fileName = fileName,
                                             targetPath = "",
-                                            localPath = targetFile.absolutePath,
+                                            localPath = partFile.absolutePath,
                                             progress = progress,
                                             state = DownloadState.Downloading,
                                             message = if (totalBytes > 0L) {
@@ -116,8 +146,13 @@ class NetworkDownloadManager(
                         }
                     }
                 } catch (error: Throwable) {
-                    targetFile.delete()
+                    // Keep the partial file so the download can be resumed later.
                     throw error
+                }
+
+                if (!partFile.renameTo(targetFile)) {
+                    partFile.copyTo(targetFile, overwrite = true)
+                    partFile.delete()
                 }
                 onProgress(
                     DownloadTask(
@@ -144,6 +179,13 @@ class NetworkDownloadManager(
                 cause = error,
             )
         }
+    }
+
+    private fun baseFileName(url: String, preferredFileName: String?): String {
+        return preferredFileName
+            ?.takeIf { it.isNotBlank() }
+            ?: fileNameFromUrl(url)
+            ?: "download-${System.currentTimeMillis()}"
     }
 
     private fun downloadDir(): File {

@@ -2,21 +2,32 @@ package com.qwadb.app.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.core.content.FileProvider
+import android.content.Intent
 import com.qwadb.app.AppServices
+import com.qwadb.app.BuildConfig
 import com.qwadb.app.R
 import com.qwadb.app.data.AppSettingsStore
 import com.qwadb.app.data.RecentDeviceStore
 import com.qwadb.app.data.ThemeMode
 import com.qwadb.app.discovery.NetworkInfoProvider
 import com.qwadb.app.discovery.ScanRangeParser
+import com.qwadb.app.download.DownloadResult
 import com.qwadb.app.i18n.AppLanguage
 import com.qwadb.app.i18n.appString
 import com.qwadb.app.scrcpy.MirrorQualityPreset
 import com.qwadb.app.validation.NetworkInputValidator
+import java.io.File
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 
 data class SettingsUiState(
     val defaultPort: String = "5555",
@@ -33,6 +44,9 @@ data class SettingsUiState(
     val cameraBitrateMbps: String = "4",
     val statusRefreshIntervalMs: String = "5000",
     val language: AppLanguage = AppLanguage.FollowSystem,
+    val currentVersion: String = BuildConfig.VERSION_NAME,
+    val updateStatus: UpdateCheckStatus = UpdateCheckStatus.Idle,
+    val updateDownload: UpdateDownloadStatus = UpdateDownloadStatus.Idle,
     val defaultPortError: String? = null,
     val connectionTimeoutError: String? = null,
     val commandTimeoutError: String? = null,
@@ -54,6 +68,12 @@ class SettingsViewModel(
     private val state = MutableStateFlow(SettingsUiState(language = AppLanguage.current()))
     val uiState: StateFlow<SettingsUiState> = state.asStateFlow()
     private var defaultScanRangeSaved = false
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
 
     init {
         viewModelScope.launch {
@@ -262,6 +282,130 @@ class SettingsViewModel(
         }
     }
 
+    /** 检查 GitHub Releases 是否有新版本。 */
+    fun checkForUpdates() {
+        state.value = state.value.copy(updateStatus = UpdateCheckStatus.Checking, updateDownload = UpdateDownloadStatus.Idle)
+        viewModelScope.launch {
+            val status = withContext(Dispatchers.IO) {
+                runCatching {
+                    val request = Request.Builder()
+                        .url(UpdateCheckUrl)
+                        .header("Accept", "application/vnd.github+json")
+                        .get()
+                        .build()
+                    httpClient.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) error("HTTP ${response.code}")
+                        val body = response.body.string().orEmpty()
+                        val latest = JSONObject(body).optString("tag_name").trim()
+                            .removePrefix("v")
+                        if (latest.isEmpty()) error("tag_name missing")
+                        when {
+                            latest == BuildConfig.VERSION_NAME -> UpdateCheckStatus.Latest
+                            isNewerVersion(latest, BuildConfig.VERSION_NAME) -> {
+                                UpdateCheckStatus.UpdateAvailable(latest)
+                            }
+                            else -> UpdateCheckStatus.Latest
+                        }
+                    }
+                }.getOrElse { UpdateCheckStatus.Failed }
+            }
+            state.value = state.value.copy(updateStatus = status)
+        }
+    }
+
+    /** 下载最新版 APK 到应用缓存目录，下载完成后可触发安装。 */
+    fun downloadUpdate() {
+        val latestVersion = (state.value.updateStatus as? UpdateCheckStatus.UpdateAvailable)?.latestVersion
+            ?: return
+        if (state.value.updateDownload is UpdateDownloadStatus.Downloading) return
+        state.value = state.value.copy(updateDownload = UpdateDownloadStatus.Downloading(0f))
+        viewModelScope.launch {
+            val apkUrl = withContext(Dispatchers.IO) {
+                runCatching {
+                    val request = Request.Builder()
+                        .url(UpdateCheckUrl)
+                        .header("Accept", "application/vnd.github+json")
+                        .get()
+                        .build()
+                    httpClient.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) error("HTTP ${response.code}")
+                        val json = JSONObject(response.body.string().orEmpty())
+                        val assets = json.optJSONArray("assets")
+                        (0 until (assets?.length() ?: 0)).asSequence()
+                            .map { assets!!.getJSONObject(it) }
+                            .mapNotNull { obj ->
+                                obj.optString("name").takeIf { it.endsWith(".apk", ignoreCase = true) }
+                                    ?.let { obj.optString("browser_download_url") }
+                            }
+                            .firstOrNull()
+                            ?: fallbackApkUrl(latestVersion)
+                    }
+                }.getOrElse { fallbackApkUrl(latestVersion) }
+            }
+            val result = AppServices.downloadManager.download(
+                url = apkUrl,
+                preferredFileName = "SkyADB-Pro-$latestVersion-release.apk",
+                onProgress = { task ->
+                    state.value = state.value.copy(
+                        updateDownload = UpdateDownloadStatus.Downloading(task.progress.coerceIn(0f, 1f)),
+                    )
+                },
+            )
+            state.value = when (result) {
+                is DownloadResult.Success -> state.value.copy(
+                    updateDownload = UpdateDownloadStatus.Downloaded(result.localPath),
+                )
+                is DownloadResult.Failure -> state.value.copy(
+                    updateDownload = UpdateDownloadStatus.Failed,
+                )
+                DownloadResult.Canceled -> state.value.copy(
+                    updateDownload = UpdateDownloadStatus.Idle,
+                )
+            }
+        }
+    }
+
+    /** 触发系统安装器安装已下载的更新 APK。 */
+    fun installDownloadedUpdate() {
+        val localPath = (state.value.updateDownload as? UpdateDownloadStatus.Downloaded)?.localPath
+            ?: return
+        val file = File(localPath)
+        if (!file.isFile) {
+            state.value = state.value.copy(updateDownload = UpdateDownloadStatus.Failed)
+            return
+        }
+        runCatching {
+            val context = AppServices.context
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file,
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(intent)
+        }
+    }
+
+    /** 兜底构造 GitHub Releases 的 APK 下载地址。 */
+    private fun fallbackApkUrl(version: String): String =
+        "https://github.com/CN-QiuWan/SkyADB-Pro/releases/download/v$version/SkyADB-Pro-$version-release.apk"
+
+    /** 简单版本号比较：按 '.' 分段比较数字，candidate > current 返回 true。 */
+    private fun isNewerVersion(candidate: String, current: String): Boolean {
+        val a = candidate.split('.').mapNotNull { it.toIntOrNull() }
+        val b = current.split('.').mapNotNull { it.toIntOrNull() }
+        val maxLen = maxOf(a.size, b.size)
+        for (i in 0 until maxLen) {
+            val av = a.getOrElse(i) { 0 }
+            val bv = b.getOrElse(i) { 0 }
+            if (av != bv) return av > bv
+        }
+        return false
+    }
+
     private fun updateTimeout(
         value: String,
         onState: (String, String?) -> Unit,
@@ -355,3 +499,22 @@ class SettingsViewModel(
 /** 系统状态刷新间隔范围（毫秒）。 */
 const val StatusRefreshIntervalMinMs = 500
 const val StatusRefreshIntervalMaxMs = 10_000
+
+/** 版本更新检查状态。 */
+sealed interface UpdateCheckStatus {
+    data object Idle : UpdateCheckStatus
+    data object Checking : UpdateCheckStatus
+    data object Latest : UpdateCheckStatus
+    data class UpdateAvailable(val latestVersion: String) : UpdateCheckStatus
+    data object Failed : UpdateCheckStatus
+}
+
+/** 更新 APK 下载状态。 */
+sealed interface UpdateDownloadStatus {
+    data object Idle : UpdateDownloadStatus
+    data class Downloading(val progress: Float) : UpdateDownloadStatus
+    data class Downloaded(val localPath: String) : UpdateDownloadStatus
+    data object Failed : UpdateDownloadStatus
+}
+
+private const val UpdateCheckUrl = "https://api.github.com/repos/CN-QiuWan/SkyADB-Pro/releases/latest"

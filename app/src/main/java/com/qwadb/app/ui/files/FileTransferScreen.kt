@@ -41,6 +41,7 @@ import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.AlertDialog
@@ -114,6 +115,7 @@ fun FileTransferScreen(
         onGoUpPane = viewModel::goUp,
         onSyncClick = viewModel::syncPathFromOther,
         onTransferClick = viewModel::transferSelected,
+        onToggleSelectAll = viewModel::toggleSelectAll,
         onCancelTransfer = viewModel::cancelTransfer,
         onNewFolderClick = viewModel::showNewFolderDialog,
         onRenameClick = viewModel::showRenameDialog,
@@ -155,6 +157,7 @@ private fun FileManagerContent(
     onGoUpPane: (FilePaneId) -> Unit,
     onSyncClick: () -> Unit,
     onTransferClick: () -> Unit,
+    onToggleSelectAll: () -> Unit,
     onCancelTransfer: () -> Unit,
     onNewFolderClick: () -> Unit,
     onRenameClick: () -> Unit,
@@ -315,10 +318,11 @@ private fun FileManagerContent(
             onGoUpClick = onGoUpClick,
             onSyncClick = onSyncClick,
             onTransferClick = onTransferClick,
+            onSelectAllClick = onToggleSelectAll,
             onNewFolderClick = onNewFolderClick,
         )
 
-        StatusFooter(status = uiState.operationStatus)
+        StatusFooter(status = uiState.operationStatus, batchTotal = uiState.transferTotal)
     }
 
     DeleteConfirmDialog(
@@ -372,7 +376,7 @@ private fun TransferProgress(status: OperationStatus) {
 }
 
 @Composable
-private fun StatusFooter(status: OperationStatus) {
+private fun StatusFooter(status: OperationStatus, batchTotal: Int) {
     val visible = status is OperationStatus.Running ||
         status is OperationStatus.Failed ||
         status is OperationStatus.Success
@@ -381,8 +385,10 @@ private fun StatusFooter(status: OperationStatus) {
         enter = fadeIn(FileMotion),
         exit = fadeOut(tween(120)),
     ) {
+        val batchLabel = if (batchTotal > 1) stringResource(R.string.files_transfering, batchTotal) else null
         val text = when (status) {
-            is OperationStatus.Running -> status.text
+            is OperationStatus.Running ->
+                if (batchLabel != null) "$batchLabel \u00b7 ${status.text}" else status.text
             is OperationStatus.Failed -> stringResource(R.string.device_status_error_format, status.text, status.suggestion)
             is OperationStatus.Success -> status.text
             OperationStatus.Idle -> ""
@@ -452,6 +458,7 @@ private fun FileBottomBar(
     onGoUpClick: () -> Unit,
     onSyncClick: () -> Unit,
     onTransferClick: () -> Unit,
+    onSelectAllClick: () -> Unit,
     onNewFolderClick: () -> Unit,
 ) {
     Row(
@@ -462,6 +469,7 @@ private fun FileBottomBar(
     ) {
         BottomBarIcon(Icons.Outlined.ArrowUpward, stringResource(R.string.files_nav_up_desc), enabled && canGoUp, onGoUpClick)
         BottomBarIcon(Icons.Outlined.Sync, stringResource(R.string.files_sync_path_desc), enabled, onSyncClick)
+        BottomBarIcon(Icons.Outlined.SelectAll, stringResource(R.string.files_select_all_desc), enabled, onSelectAllClick)
         BottomBarIcon(Icons.Outlined.SwapHoriz, stringResource(R.string.files_transfer_to_other_desc), enabled, onTransferClick)
         BottomBarIcon(Icons.Outlined.CreateNewFolder, stringResource(R.string.files_new_folder_desc), enabled, onNewFolderClick)
     }
@@ -828,6 +836,7 @@ private fun FileManagerContentPreview() {
             onGoUpPane = {},
             onSyncClick = {},
             onTransferClick = {},
+            onToggleSelectAll = {},
             onCancelTransfer = {},
             onNewFolderClick = {},
             onRenameClick = {},

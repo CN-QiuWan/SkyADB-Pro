@@ -28,6 +28,7 @@ object ScrcpyProtocol {
     private const val TypeInjectKeycode = 0
     private const val TypeInjectTouchEvent = 2
     private const val TypeBackOrScreenOn = 4
+    // 与 scrcpy server v4.1 官方 ControlMessage 一致：TYPE_SET_DISPLAY_POWER = 10。
     private const val TypeSetDisplayPower = 10
     private const val TypeResetVideo = 17
     // 与 scrcpy server v4.1 官方 ControlMessage 一致：TYPE_CAMERA_SET_TORCH = 18。

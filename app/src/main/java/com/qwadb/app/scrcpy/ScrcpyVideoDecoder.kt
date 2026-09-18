@@ -64,6 +64,9 @@ class ScrcpyVideoDecoder(
                 if (size !in 1..10_000_000) continue
 
                 val data = stream.source.readByteArray(size.toLong())
+                // 内存说明：流式直通解码，帧数据立即送入 MediaCodec 输入缓冲后即弃，
+                // 无用户空间帧队列累积（无 ArrayDeque 等无界缓冲）；单帧大小已有
+                // 1..10MB 上限保护，解码器输入缓冲由系统按固定数量管理。
                 val isConfig = (ptsAndFlags and ScrcpyProtocol.PacketFlagConfig) != 0L
                 val isKeyFrame = (ptsAndFlags and ScrcpyProtocol.PacketFlagKeyFrame) != 0L
                 val pts = ptsAndFlags and ScrcpyProtocol.PacketPtsMask

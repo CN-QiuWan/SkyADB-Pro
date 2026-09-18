@@ -39,6 +39,7 @@ data class OnlineDownloadUiState(
     val actionEnabled: Boolean = false,
     val task: DownloadTask? = null,
     val operationStatus: OperationStatus = OperationStatus.Idle,
+    val pendingResumeUrl: String? = null,
 )
 
 class OnlineDownloadViewModel(
@@ -78,34 +79,58 @@ class OnlineDownloadViewModel(
             return
         }
 
+        if (downloadManager.partialDownloadFile(current.url) != null) {
+            state.value = current.copy(
+                actionEnabled = false,
+                pendingResumeUrl = current.url,
+                operationStatus = OperationStatus.Running(appString(R.string.download_file_exists)),
+            )
+            return
+        }
+
+        startDownload(current, resume = false)
+    }
+
+    fun onResumeChoice(resume: Boolean) {
+        val current = state.value
+        val url = current.pendingResumeUrl ?: return
+        if (!resume) {
+            downloadManager.deletePartialDownload(url)
+        }
+        startDownload(current.copy(pendingResumeUrl = null), resume = resume)
+    }
+
+    private fun startDownload(form: OnlineDownloadUiState, resume: Boolean) {
         downloadJob?.cancel()
-        state.value = current.copy(
+        state.value = form.copy(
             actionEnabled = false,
-            operationStatus = OperationStatus.Running(appString(R.string.download_preparing)),
+            operationStatus = OperationStatus.Running(
+                if (resume) appString(R.string.download_resuming) else appString(R.string.download_preparing),
+            ),
             task = DownloadTask(
-                url = current.url,
+                url = form.url,
                 fileName = appString(R.string.download_waiting_filename),
-                targetPath = current.targetPath,
+                targetPath = form.targetPath,
                 progress = 0f,
                 state = DownloadState.Waiting,
             ),
         )
 
         downloadJob = viewModelScope.launch {
-            val result = downloadManager.download(current.url) { task ->
+            val result = downloadManager.download(form.url, resume = resume) { task ->
                 state.value = state.value.copy(
-                    task = task.copy(targetPath = current.targetPath),
+                    task = task.copy(targetPath = form.targetPath),
                     operationStatus = OperationStatus.Running(task.message),
                 )
             }
 
             when (result) {
-                is DownloadResult.Success -> handleDownloadedFile(current, result)
+                is DownloadResult.Success -> handleDownloadedFile(form, result)
                 is DownloadResult.Failure -> {
                     DiagnosticLogger.record(
                         module = DiagnosticModule.Download,
                         operation = appString(R.string.download_op_download),
-                        target = current.url,
+                        target = form.url,
                         message = result.message,
                         suggestion = result.suggestion,
                         cause = result.cause,
@@ -272,6 +297,7 @@ class OnlineDownloadViewModel(
             targetPathError = validation.targetPathError,
             actionEnabled = validation.valid,
             operationStatus = OperationStatus.Idle,
+            pendingResumeUrl = null,
         )
     }
 

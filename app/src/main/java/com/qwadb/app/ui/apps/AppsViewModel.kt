@@ -1,6 +1,7 @@
 package com.qwadb.app.ui.apps
 
 import android.net.Uri
+import android.os.Environment
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -29,6 +30,8 @@ data class AppsUiState(
     val pendingExportPackage: String? = null,
     val operationStatus: OperationStatus = OperationStatus.Idle,
     val loading: Boolean = false,
+    val selectionMode: Boolean = false,
+    val selectedPackages: Set<String> = emptySet(),
 ) {
     val filteredApps: List<AppInfo>
         get() {
@@ -184,6 +187,114 @@ class AppsViewModel(
             }
         }
     }
+
+    fun toggleSelectionMode() {
+        state.value = if (state.value.selectionMode) {
+            state.value.copy(selectionMode = false, selectedPackages = emptySet())
+        } else {
+            state.value.copy(selectionMode = true)
+        }
+    }
+
+    fun toggleSelect(packageName: String) {
+        val current = state.value.selectedPackages
+        state.value = state.value.copy(
+            selectedPackages = if (packageName in current) current - packageName else current + packageName,
+        )
+    }
+
+    fun selectAll() {
+        state.value = state.value.copy(
+            selectedPackages = state.value.filteredApps.map { it.packageName }.toSet(),
+        )
+    }
+
+    fun clearSelection() {
+        state.value = state.value.copy(selectedPackages = emptySet())
+    }
+
+    fun batchUninstallSelected() {
+        val packages = state.value.selectedPackages.toList()
+        if (packages.isEmpty()) return
+        viewModelScope.launch {
+            var succeeded = 0
+            var failed = 0
+            packages.forEachIndexed { index, packageName ->
+                state.value = state.value.copy(
+                    operationStatus = OperationStatus.Running(appString(R.string.apps_batch_processing, index + 1, packages.size)),
+                )
+                when (adbRepository.uninstall(packageName)) {
+                    is AdbOperationResult.Success -> succeeded++
+                    is AdbOperationResult.Failure -> failed++
+                }
+            }
+            finishBatchOperation(succeeded, failed)
+            refreshAppsSilently()
+        }
+    }
+
+    fun batchExportSelected() {
+        val packages = state.value.selectedPackages.toList()
+        if (packages.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            var succeeded = 0
+            var failed = 0
+            packages.forEachIndexed { index, packageName ->
+                state.value = state.value.copy(
+                    operationStatus = OperationStatus.Running(appString(R.string.apps_batch_processing, index + 1, packages.size)),
+                )
+                val target = fileManager.createExportApkFile(packageName)
+                try {
+                    when (adbRepository.exportAppApk(packageName, target)) {
+                        is AdbOperationResult.Success -> {
+                            if (saveApkToDownloads(target, packageName)) succeeded++ else failed++
+                        }
+                        is AdbOperationResult.Failure -> failed++
+                    }
+                } finally {
+                    runCatching { target.delete() }
+                }
+            }
+            finishBatchOperation(succeeded, failed)
+        }
+    }
+
+    private fun finishBatchOperation(succeeded: Int, failed: Int) {
+        state.value = state.value.copy(
+            selectionMode = false,
+            selectedPackages = emptySet(),
+            operationStatus = OperationStatus.Success(appString(R.string.apps_batch_complete, succeeded, failed)),
+        )
+    }
+
+    private fun refreshAppsSilently() {
+        viewModelScope.launch {
+            when (val result = adbRepository.listApps()) {
+                is AdbOperationResult.Success -> {
+                    val enriched = withContext(Dispatchers.Default) {
+                        AppDisplayEnricher.enrichWithLocal(AppServices.context, result.data)
+                    }
+                    state.value = state.value.copy(apps = enriched)
+                }
+                is AdbOperationResult.Failure -> Unit
+            }
+        }
+    }
+
+    private fun saveApkToDownloads(file: File, packageName: String): Boolean = runCatching {
+        val safeName = packageName.replace(Regex("""[\\/:*?"<>|]"""), "_").ifBlank { "app" }
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (!downloadsDir.exists()) downloadsDir.mkdirs()
+        var target = File(downloadsDir, "$safeName.apk")
+        var counter = 1
+        while (target.exists()) {
+            target = File(downloadsDir, "${safeName}_$counter.apk")
+            counter++
+        }
+        file.inputStream().use { input ->
+            target.outputStream().use { output -> input.copyTo(output) }
+        }
+    }.isSuccess
 
     private fun runAppAction(
         runningText: String,

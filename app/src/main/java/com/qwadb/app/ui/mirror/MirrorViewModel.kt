@@ -76,6 +76,10 @@ class MirrorViewModel(
             val audioEnabled = settings.mirrorAudioEnabled
             state.value = state.value.copy(audioEnabled = audioEnabled)
             val qualityPreset = settings.mirrorQualityPreset
+            // 内存提示：高画质（MirrorQualityPreset.High = 1920p/60fps/8Mbps）下解码缓冲与
+            // Surface 渲染内存占用较高，若设备内存紧张可考虑降级 maxFps（如 30）或降低
+            // videoBitRate（如 4Mbps）以减小解码压力；解码器本身为流式直通 MediaCodec，
+            // 无用户空间帧队列累积。
             val customOptions = if (qualityPreset == MirrorQualityPreset.Custom) {
                 ScrcpyOptions(
                     maxSize = settings.mirrorCustomMaxSize,

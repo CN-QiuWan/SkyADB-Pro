@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
@@ -29,6 +30,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import com.qwadb.app.ui.components.AppTopBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -64,6 +66,7 @@ fun OnlineDownloadScreen(
         onTargetPathChanged = viewModel::onTargetPathChanged,
         onStartClick = viewModel::onStartClick,
         onCancelClick = viewModel::onCancelClick,
+        onResumeChoice = viewModel::onResumeChoice,
     )
 }
 
@@ -78,6 +81,7 @@ private fun OnlineDownloadContent(
     onTargetPathChanged: (String) -> Unit,
     onStartClick: () -> Unit,
     onCancelClick: () -> Unit,
+    onResumeChoice: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -116,6 +120,36 @@ private fun OnlineDownloadContent(
             DownloadStatusMessage(status = uiState.operationStatus)
         }
     }
+
+    ResumeDownloadDialog(
+        pendingUrl = uiState.pendingResumeUrl,
+        onResume = { onResumeChoice(true) },
+        onRestart = { onResumeChoice(false) },
+    )
+}
+
+@Composable
+private fun ResumeDownloadDialog(
+    pendingUrl: String?,
+    onResume: () -> Unit,
+    onRestart: () -> Unit,
+) {
+    if (pendingUrl == null) return
+    AlertDialog(
+        onDismissRequest = onRestart,
+        title = { Text(stringResource(R.string.download_file_exists)) },
+        text = { Text(pendingUrl) },
+        confirmButton = {
+            TextButton(onClick = onResume) {
+                Text(stringResource(R.string.download_file_exists_yes))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onRestart) {
+                Text(stringResource(R.string.download_file_exists_no))
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -279,6 +313,7 @@ private fun OnlineDownloadApkPreview() {
             onTargetPathChanged = {},
             onStartClick = {},
             onCancelClick = {},
+            onResumeChoice = {},
         )
     }
 }
@@ -308,6 +343,7 @@ private fun OnlineDownloadPushPreview() {
             onTargetPathChanged = {},
             onStartClick = {},
             onCancelClick = {},
+            onResumeChoice = {},
         )
     }
 }

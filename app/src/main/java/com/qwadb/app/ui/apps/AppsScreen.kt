@@ -3,6 +3,7 @@ package com.qwadb.app.ui.apps
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
@@ -31,6 +33,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -109,6 +113,11 @@ fun AppsScreen(
         onUninstallClick = viewModel::uninstallApp,
         onCancelPendingAction = viewModel::cancelPendingAction,
         onConfirmPendingAction = viewModel::confirmPendingAction,
+        onToggleSelectionMode = viewModel::toggleSelectionMode,
+        onToggleSelect = viewModel::toggleSelect,
+        onBatchUninstallClick = viewModel::batchUninstallSelected,
+        onBatchExportClick = viewModel::batchExportSelected,
+        onBatchCancelClick = viewModel::toggleSelectionMode,
     )
 }
 
@@ -128,7 +137,14 @@ private fun AppsContent(
     onUninstallClick: (String) -> Unit,
     onCancelPendingAction: () -> Unit,
     onConfirmPendingAction: () -> Unit,
+    onToggleSelectionMode: () -> Unit = {},
+    onToggleSelect: (String) -> Unit = {},
+    onBatchUninstallClick: () -> Unit = {},
+    onBatchExportClick: () -> Unit = {},
+    onBatchCancelClick: () -> Unit = {},
 ) {
+    var batchDialog by remember { mutableStateOf<BatchDialogType?>(null) }
+
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = {
@@ -147,11 +163,28 @@ private fun AppsContent(
                 }
             },
             actions = {
-                IconButton(onClick = onRefreshClick) {
-                    Icon(imageVector = Icons.Outlined.Refresh, contentDescription = stringResource(R.string.apps_refresh_list_desc))
+                if (!uiState.selectionMode) {
+                    IconButton(onClick = onRefreshClick) {
+                        Icon(imageVector = Icons.Outlined.Refresh, contentDescription = stringResource(R.string.apps_refresh_list_desc))
+                    }
+                }
+                IconButton(onClick = onToggleSelectionMode) {
+                    Icon(
+                        imageVector = if (uiState.selectionMode) Icons.Outlined.Close else Icons.Outlined.Checklist,
+                        contentDescription = stringResource(R.string.apps_select_mode_desc),
+                    )
                 }
             },
         )
+
+        if (uiState.selectionMode) {
+            BatchActionBar(
+                selectedCount = uiState.selectedPackages.size,
+                onBatchUninstallClick = { batchDialog = BatchDialogType.Uninstall },
+                onBatchExportClick = { batchDialog = BatchDialogType.Export },
+                onCancelClick = onBatchCancelClick,
+            )
+        }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -204,6 +237,9 @@ private fun AppsContent(
                 ) { app ->
                     AppItemCard(
                         app = app,
+                        selectionMode = uiState.selectionMode,
+                        selected = app.packageName in uiState.selectedPackages,
+                        onSelectClick = onToggleSelect,
                         onLaunchClick = onLaunchClick,
                         onStopClick = onStopClick,
                         onSetEnabledClick = onSetEnabledClick,
@@ -215,10 +251,113 @@ private fun AppsContent(
         }
     }
 
+    BatchActionDialog(
+        dialog = batchDialog,
+        selectedCount = uiState.selectedPackages.size,
+        onConfirm = {
+            val type = batchDialog
+            batchDialog = null
+            when (type) {
+                BatchDialogType.Uninstall -> onBatchUninstallClick()
+                BatchDialogType.Export -> onBatchExportClick()
+                null -> Unit
+            }
+        },
+        onDismiss = { batchDialog = null },
+    )
+
     PendingActionDialog(
         pendingAction = uiState.pendingAction,
         onDismiss = onCancelPendingAction,
         onConfirm = onConfirmPendingAction,
+    )
+}
+
+private enum class BatchDialogType { Uninstall, Export }
+
+@Composable
+private fun BatchActionBar(
+    selectedCount: Int,
+    onBatchUninstallClick: () -> Unit,
+    onBatchExportClick: () -> Unit,
+    onCancelClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = AppDimens.ScreenPadding, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.apps_selected_count, selectedCount),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onCancelClick) {
+                Text(stringResource(R.string.apps_batch_cancel))
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedButton(
+                onClick = onBatchUninstallClick,
+                enabled = selectedCount > 0,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(stringResource(R.string.apps_batch_uninstall))
+            }
+            OutlinedButton(
+                onClick = onBatchExportClick,
+                enabled = selectedCount > 0,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(stringResource(R.string.apps_batch_export))
+            }
+        }
+    }
+}
+
+@Composable
+private fun BatchActionDialog(
+    dialog: BatchDialogType?,
+    selectedCount: Int,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (dialog == null) return
+
+    val isUninstall = dialog == BatchDialogType.Uninstall
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(
+                    if (isUninstall) R.string.apps_batch_uninstall_title else R.string.apps_batch_export_title,
+                    selectedCount,
+                ),
+            )
+        },
+        text = {
+            Text(
+                stringResource(
+                    if (isUninstall) R.string.apps_batch_uninstall_message else R.string.apps_batch_export_message,
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(if (isUninstall) R.string.apps_batch_uninstall else R.string.apps_batch_export))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
     )
 }
 
@@ -295,6 +434,9 @@ private fun PendingActionDialog(
 @Composable
 private fun AppItemCard(
     app: AppInfo,
+    selectionMode: Boolean,
+    selected: Boolean,
+    onSelectClick: (String) -> Unit,
     onLaunchClick: (String) -> Unit,
     onStopClick: (String) -> Unit,
     onSetEnabledClick: (AppInfo, Boolean) -> Unit,
@@ -304,16 +446,31 @@ private fun AppItemCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            },
+        ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 62.dp)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .then(
+                    if (selectionMode) Modifier.clickable { onSelectClick(app.packageName) } else Modifier,
+                ),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (selectionMode) {
+                Checkbox(
+                    checked = selected,
+                    onCheckedChange = { onSelectClick(app.packageName) },
+                )
+            }
             DeviceAppIcon(app = app)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -328,18 +485,20 @@ private fun AppItemCard(
                     maxLines = 1,
                 )
             }
-            AssistChip(
-                onClick = {},
-                label = { Text(stringResource(app.statusLabelRes)) },
-            )
-            AppActionMenu(
-                app = app,
-                onLaunchClick = onLaunchClick,
-                onStopClick = onStopClick,
-                onSetEnabledClick = onSetEnabledClick,
-                onExportClick = onExportClick,
-                onUninstallClick = onUninstallClick,
-            )
+            if (!selectionMode) {
+                AssistChip(
+                    onClick = {},
+                    label = { Text(stringResource(app.statusLabelRes)) },
+                )
+                AppActionMenu(
+                    app = app,
+                    onLaunchClick = onLaunchClick,
+                    onStopClick = onStopClick,
+                    onSetEnabledClick = onSetEnabledClick,
+                    onExportClick = onExportClick,
+                    onUninstallClick = onUninstallClick,
+                )
+            }
         }
     }
 }

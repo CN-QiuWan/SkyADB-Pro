@@ -81,6 +81,30 @@
     <string name="settings_status_refresh_range">Must be between 500-10000 ms</string>
     <string name="unit_ms">ms</string>
 
+    <!-- Update check -->
+    <string name="settings_update_check_title">Check for updates</string>
+    <string name="settings_update_check_desc">Check GitHub Releases for a new version</string>
+    <string name="settings_update_current_version">Current version: v%1$s</string>
+    <string name="settings_update_checking">Checking for updates\u2026</string>
+    <string name="settings_update_latest">You\'re on the latest version</string>
+    <string name="settings_update_available">New version v%1$s available</string>
+    <string name="settings_update_open_release">Open releases page</string>
+    <string name="settings_update_download">Download update</string>
+    <string name="settings_update_downloading">Downloading update (%1$d%%)</string>
+    <string name="settings_update_downloaded">Update downloaded, tap to install</string>
+    <string name="settings_update_install">Install update</string>
+    <string name="settings_update_failed">Update check failed</string>
+    <string name="settings_update_failed_hint">Please check your network connection and try again.</string>
+    <string name="settings_update_download_failed">Update download failed, please try again later.</string>
+
+    <!-- QR share -->
+    <string name="qr_share_title">Share connection</string>
+    <string name="qr_share_desc">Scan the QR code to connect</string>
+    <string name="qr_generate_failed">Failed to generate QR code</string>
+    <string name="qr_share_close">Close</string>
+    <string name="qr_no_connection">No active connection to share</string>
+    <string name="qr_connection_format">adb connect %1$s:%2$d</string>
+
     <!-- Home screen -->
     <string name="home_title">Device connection</string>
     <string name="action_disconnect">Disconnect</string>
@@ -880,4 +904,51 @@
     <string name="status_brightness_format">%1$d / 255 (%2$d%%)</string>
     <string name="status_processes_format">%1$d processes</string>
     <string name="status_services_format">%1$d services</string>
+
+    <!-- Batch app operations -->
+    <string name="apps_select_mode_desc">Enter multi-select mode</string>
+    <string name="apps_batch_uninstall">Batch uninstall</string>
+    <string name="apps_batch_export">Batch export</string>
+    <string name="apps_batch_cancel">Cancel multi-select</string>
+    <string name="apps_selected_count">%1$d selected</string>
+    <string name="apps_batch_uninstall_title">Uninstall %1$d app(s)?</string>
+    <string name="apps_batch_uninstall_message">The selected apps will be removed from the target device.</string>
+    <string name="apps_batch_export_title">Export %1$d app(s)?</string>
+    <string name="apps_batch_export_message">The selected APK files will be saved to the download directory.</string>
+    <string name="apps_batch_processing">Processing %1$d/%2$d</string>
+    <string name="apps_batch_complete">Batch operation complete: %1$d succeeded, %2$d failed</string>
+
+    <!-- Remote control custom keys -->
+    <string name="remote_custom_keys_title">Custom keys</string>
+    <string name="remote_add_custom_key">Add custom key</string>
+    <string name="remote_custom_key_hint">Comma-separated key names, e.g. HOME,HOME or POWER,VOLUME_DOWN</string>
+    <string name="remote_custom_key_label">Custom key</string>
+    <string name="remote_custom_key_saved">Custom key saved</string>
+    <string name="remote_custom_key_invalid">Invalid key name or sequence</string>
+    <string name="remote_clear_custom_keys">Clear custom keys</string>
+    <string name="remote_delete_custom_key">Delete</string>
+    <string name="remote_custom_key_empty">No custom keys yet</string>
+
+    <!-- Shell favorites -->
+    <string name="shell_favorites_title">Favorites</string>
+    <string name="shell_add_favorite">Add to favorites</string>
+    <string name="shell_remove_favorite">Remove from favorites</string>
+    <string name="shell_no_favorites">No favorite commands yet</string>
+    <string name="shell_favorite_added">Added to favorites</string>
+    <string name="shell_favorite_removed">Removed from favorites</string>
+    <string name="shell_favorites_hint">Tap the star to save a favorite command</string>
+
+    <!-- File transfer multi-select -->
+    <string name="files_select_all_desc">Select all</string>
+    <string name="files_upload_selected">Upload selected</string>
+    <string name="files_download_selected">Download selected</string>
+    <string name="files_transfering">Transferring %1$d item(s)</string>
+
+    <!-- Download resume -->
+    <string name="download_resume">Resume</string>
+    <string name="download_resuming">Resuming download\u2026</string>
+    <string name="download_cannot_resume">The server doesn\'t support resuming</string>
+    <string name="download_file_exists">File already exists, resume?</string>
+    <string name="download_file_exists_yes">Resume</string>
+    <string name="download_file_exists_no">Restart</string>
 </resources>

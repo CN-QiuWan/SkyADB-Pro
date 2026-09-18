@@ -1,5 +1,6 @@
 package com.qwadb.app.ui.remote
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.VolumeDown
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
@@ -32,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import com.qwadb.app.ui.components.AppTopBar as TopAppBar
 import androidx.compose.runtime.Composable
@@ -39,6 +42,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,6 +71,11 @@ fun RemoteControlScreen(
         uiState = uiState,
         onBackClick = onBackClick,
         onKeyClick = viewModel::sendKey,
+        onCustomKeyInputChanged = viewModel::onCustomKeyInputChanged,
+        onAddCustomKey = viewModel::addCustomKey,
+        onRemoveCustomKey = viewModel::removeCustomKey,
+        onClearCustomKeys = viewModel::clearCustomKeys,
+        onCustomKeyClick = viewModel::sendCustomKey,
     )
 }
 
@@ -76,6 +85,11 @@ private fun RemoteControlContent(
     uiState: RemoteControlUiState,
     onBackClick: () -> Unit,
     onKeyClick: (RemoteKey) -> Unit,
+    onCustomKeyInputChanged: (String) -> Unit,
+    onAddCustomKey: (String) -> Unit,
+    onRemoveCustomKey: (String) -> Unit,
+    onClearCustomKeys: () -> Unit,
+    onCustomKeyClick: (String) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -166,6 +180,21 @@ private fun RemoteControlContent(
                         KeyAction(RemoteKey.Power, Icons.Outlined.PowerSettingsNew),
                     ),
                     onKeyClick = onKeyClick,
+                )
+            }
+
+            item { SectionHeader(title = stringResource(R.string.remote_custom_keys_title)) }
+
+            item {
+                CustomKeysCard(
+                    customKeys = uiState.customKeys,
+                    input = uiState.customKeyInput,
+                    error = uiState.customKeyError,
+                    onInputChanged = onCustomKeyInputChanged,
+                    onAdd = onAddCustomKey,
+                    onRemove = onRemoveCustomKey,
+                    onClear = onClearCustomKeys,
+                    onKeyClick = onCustomKeyClick,
                 )
             }
         }
@@ -285,6 +314,97 @@ private fun RemoteIconButton(
 }
 
 @Composable
+private fun CustomKeysCard(
+    customKeys: List<String>,
+    input: String,
+    error: String?,
+    onInputChanged: (String) -> Unit,
+    onAdd: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onClear: () -> Unit,
+    onKeyClick: (String) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppDimens.CardRadius),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AppDimens.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = onInputChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.remote_custom_key_label)) },
+                placeholder = { Text(stringResource(R.string.remote_custom_key_hint)) },
+                singleLine = true,
+                isError = error != null,
+                supportingText = error?.let { { Text(it) } },
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = { onAdd(input) },
+                    enabled = input.isNotBlank(),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.remote_add_custom_key))
+                }
+                OutlinedButton(
+                    onClick = onClear,
+                    enabled = customKeys.isNotEmpty(),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.remote_clear_custom_keys))
+                }
+            }
+
+            if (customKeys.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.remote_custom_key_empty),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                customKeys.forEach { sequence ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onKeyClick(sequence) }
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = sequence,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        IconButton(
+                            onClick = { onRemove(sequence) },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = stringResource(R.string.remote_delete_custom_key),
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun RemoteStatus(status: OperationStatus) {
     when (status) {
         OperationStatus.Idle -> Unit
@@ -319,6 +439,11 @@ private fun RemoteControlContentPreview() {
             uiState = RemoteControlUiState(),
             onBackClick = {},
             onKeyClick = {},
+            onCustomKeyInputChanged = {},
+            onAddCustomKey = {},
+            onRemoveCustomKey = {},
+            onClearCustomKeys = {},
+            onCustomKeyClick = {},
         )
     }
 }

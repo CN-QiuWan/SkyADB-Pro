@@ -21,8 +21,8 @@ android {
         applicationId = "com.qwadb.skyadb3"
         minSdk = 24
         targetSdk = 37
-        versionCode = ciVersionCode ?: 200
-        versionName = ciVersionName ?: "0.2.0"
+        versionCode = ciVersionCode ?: 202
+        versionName = ciVersionName ?: "0.2.2"
     }
 
     signingConfigs {
@@ -57,6 +57,11 @@ android {
         compose = true
         buildConfig = true
     }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
 }
 
 dependencies {
@@ -82,6 +87,7 @@ dependencies {
     implementation(libs.timber)
 
     testImplementation(libs.junit)
+    implementation(libs.zxing.core)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

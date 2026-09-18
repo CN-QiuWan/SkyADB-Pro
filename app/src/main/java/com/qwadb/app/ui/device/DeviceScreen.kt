@@ -1,5 +1,6 @@
 package com.qwadb.app.ui.device
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,11 +24,13 @@ import androidx.compose.material.icons.outlined.InstallDesktop
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.QrCode
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SettingsRemote
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,19 +39,30 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import com.qwadb.app.ui.components.AppTopBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.graphics.Bitmap
+import android.graphics.Color
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
 import com.qwadb.app.R
 import com.qwadb.app.adb.AdbSessionKind
 import com.qwadb.app.model.ConnectionState
@@ -127,10 +141,22 @@ private fun DeviceContent(
     onRefreshClick: () -> Unit,
     onToggleInfoClick: () -> Unit,
 ) {
+    var showQrDialog by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(stringResource(R.string.device_details_title)) },
             actions = {
+                IconButton(
+                    onClick = { showQrDialog = true },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.QrCode,
+                        contentDescription = stringResource(R.string.qr_share_title),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
                 IconButton(
                     onClick = onRefreshClick,
                     enabled = !uiState.refreshing && uiState.connectionState == ConnectionState.Connected,
@@ -263,7 +289,59 @@ private fun DeviceContent(
             }
         }
     }
+
+    if (showQrDialog) {
+        val address = uiState.connectionAddress
+        val qrBitmap = remember(address) {
+            address?.let { generateQrBitmap("adb connect $it", QrBitmapSizePx) }
+        }
+        AlertDialog(
+            onDismissRequest = { showQrDialog = false },
+            title = { Text(stringResource(R.string.qr_share_title)) },
+            text = {
+                when {
+                    address == null -> Text(stringResource(R.string.qr_no_connection))
+                    qrBitmap == null -> Text(stringResource(R.string.qr_generate_failed))
+                    else -> Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Image(
+                            bitmap = qrBitmap.asImageBitmap(),
+                            contentDescription = stringResource(R.string.qr_share_desc),
+                            modifier = Modifier.size(220.dp),
+                        )
+                        Text(
+                            text = "adb connect $address",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showQrDialog = false }) {
+                    Text(stringResource(R.string.qr_share_close))
+                }
+            },
+        )
+    }
 }
+
+/** 生成内容为 text 的二维码 Bitmap，失败返回 null。 */
+private fun generateQrBitmap(text: String, sizePx: Int): Bitmap? {
+    return runCatching {
+        val hints = mapOf(EncodeHintType.MARGIN to 1)
+        val matrix = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, sizePx, sizePx, hints)
+        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.RGB_565)
+        for (x in 0 until sizePx) for (y in 0 until sizePx) {
+            bitmap.setPixel(x, y, if (matrix[x, y]) Color.BLACK else Color.WHITE)
+        }
+        bitmap
+    }.getOrNull()
+}
+
+private const val QrBitmapSizePx = 512
 
 @Composable
 private fun DeviceRefreshStatus(status: OperationStatus) {

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.core.content.FileProvider
 import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import com.qwadb.app.AppServices
 import com.qwadb.app.BuildConfig
 import com.qwadb.app.R
@@ -374,8 +376,20 @@ class SettingsViewModel(
             state.value = state.value.copy(updateDownload = UpdateDownloadStatus.Failed)
             return
         }
+        val context = AppServices.context
+        // 未授予"安装未知来源应用"权限时，引导用户去系统设置开启后再点击安装
+        if (!context.packageManager.canRequestPackageInstalls()) {
+            runCatching {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:${context.packageName}"),
+                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+            return
+        }
         runCatching {
-            val context = AppServices.context
             val uri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",

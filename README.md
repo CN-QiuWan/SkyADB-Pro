@@ -94,10 +94,10 @@ SkyADBPro is an optimized and improved version of SkyADB, designed for fast and 
 
 ## 下载 / Download
 
-- **SkyADB-Pro-0.2.2-release.apk**可前往 Releases 页面获取最新版本。
+- **SkyADB-Pro-1.0.0-release.apk**可前往 Releases 页面获取最新版本。
 -安全校验码
- SkyADB-Pro-0.2.2-release.apk
-SHA-256: cf8cbeb43c362378e362ac6cd8bae55fe5f9086a86922989aa3addf9bcf7f898
+ SkyADB-Pro-1.0.0-release.apk
+SHA-256: a65ae90359dbebc2e0d897d4ce7b964128e482039a990683a3a11574a9daa739
 
 scrcpy-server-v4.1 (assets/scrcpy/)
 SHA-256: deacb991ed2509715160ffdc7907e47b4160eb30d1566217e9047fd5b8850cae

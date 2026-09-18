@@ -1,5 +1,7 @@
 package com.qwadb.app.ui.settings
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -130,6 +132,7 @@ private fun SettingsContent(
     } else {
         "$currentVersionLabel · $updateStatusText"
     }
+    val contactDesc = stringResource(R.string.settings_contact_desc)
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(R.string.settings_title)) })
@@ -438,10 +441,18 @@ private fun SettingsContent(
                     SettingBlock(
                         icon = Icons.Outlined.Email,
                         title = stringResource(R.string.settings_contact_title),
-                        description = stringResource(R.string.settings_contact_desc),
+                        description = contactDesc,
                         onClick = {
                             if (isChineseLocale) {
-                                uriHandler.openUri(QqContactUrl)
+                                // 复制 QQ 号到剪贴板，并尝试打开手机 QQ
+                                val qqNumber = contactDesc.substringAfter('：').trim()
+                                val clipboard = context.getSystemService(ClipboardManager::class.java)
+                                clipboard.setPrimaryClip(ClipData.newPlainText("QQ", qqNumber))
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse("mqqwpa://im/chat?chat_type=wpa&uin=$qqNumber")),
+                                    )
+                                }
                             } else {
                                 runCatching {
                                     context.startActivity(
@@ -458,7 +469,6 @@ private fun SettingsContent(
 }
 
 private const val ProjectUrl = "https://github.com/CN-QiuWan/SkyADB-Pro"
-private const val QqContactUrl = "https://qm.qq.com/q/nYEpLh7iKs"
 private const val ContactEmail = "qiuwanup@gmail.com"
 
 /** 画质参数输入项：标签 + 说明 + 输入框。 */

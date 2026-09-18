@@ -21,8 +21,8 @@ android {
         applicationId = "com.qwadb.skyadb3"
         minSdk = 24
         targetSdk = 37
-        versionCode = ciVersionCode ?: 203
-        versionName = ciVersionName ?: "0.2.2"
+        versionCode = ciVersionCode ?: 1000
+        versionName = ciVersionName ?: "1.0.0"
     }
 
     signingConfigs {

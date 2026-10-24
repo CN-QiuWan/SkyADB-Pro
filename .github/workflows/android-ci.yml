@@ -101,7 +101,11 @@ jobs:
             exit 1
           fi
           APK_PATH="$(find app/build/outputs/apk/release -name '*.apk' | head -n 1)"
-          RELEASE_TITLE="skyadb ${RELEASE_TAG}"
+          VERSION="${RELEASE_TAG#v}"
+          NAMED_APK="$(dirname "${APK_PATH}")/SkyADB-Pro-${VERSION}-release.apk"
+          cp "${APK_PATH}" "${NAMED_APK}"
+          APK_PATH="${NAMED_APK}"
+          RELEASE_TITLE="SkyADB-Pro ${RELEASE_TAG}"
           CURRENT_TAG="${RELEASE_TAG}"
           PREVIOUS_TAG="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${CURRENT_TAG}$" | head -n 1 || true)"
           if [[ -n "${PREVIOUS_TAG}" ]]; then

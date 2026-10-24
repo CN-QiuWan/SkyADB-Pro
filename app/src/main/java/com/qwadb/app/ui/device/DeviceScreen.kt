@@ -2,7 +2,9 @@ package com.qwadb.app.ui.device
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,11 +27,15 @@ import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.QrCode
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SettingsRemote
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
@@ -52,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -71,6 +78,7 @@ import com.qwadb.app.model.OperationStatus
 import com.qwadb.app.ui.components.AppStatusBadge
 import com.qwadb.app.ui.components.SectionHeader
 import com.qwadb.app.ui.components.ToolActionCard
+import com.qwadb.app.ui.pairing.QrScanScreen
 import com.qwadb.app.ui.shared.SharedToolKeys
 import com.qwadb.app.ui.theme.AppDimens
 import com.qwadb.app.ui.theme.AdbManagerTheme
@@ -93,6 +101,11 @@ fun DeviceScreen(
     onStatusClick: () -> Unit = {},
     onLogsClick: () -> Unit = {},
     onShellClick: () -> Unit = {},
+    onUploadClick: () -> Unit = {},
+    onPullClick: () -> Unit = {},
+    onStorageOverviewClick: () -> Unit = {},
+    onAdb5555Click: () -> Unit = {},
+    onScanQrClick: () -> Unit = {},
     viewModel: DeviceViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -114,6 +127,13 @@ fun DeviceScreen(
         onStatusClick = onStatusClick,
         onLogsClick = onLogsClick,
         onShellClick = onShellClick,
+        onUploadClick = onUploadClick,
+        onPullClick = onPullClick,
+        onAdb5555Click = onAdb5555Click,
+        onStorageClick = onStorageOverviewClick,
+        onDismissStorageClick = viewModel::dismissStorageOverview,
+        onScanQrClick = onScanQrClick,
+        onScanResult = viewModel::connectToScanResult,
         onRefreshClick = viewModel::refreshDeviceInfo,
         onToggleInfoClick = viewModel::toggleInfoExpanded,
     )
@@ -138,11 +158,20 @@ private fun DeviceContent(
     onStatusClick: () -> Unit,
     onLogsClick: () -> Unit,
     onShellClick: () -> Unit,
+    onUploadClick: () -> Unit,
+    onPullClick: () -> Unit,
+    onAdb5555Click: () -> Unit,
+    onStorageClick: () -> Unit,
+    onDismissStorageClick: () -> Unit,
+    onScanQrClick: () -> Unit,
+    onScanResult: (host: String, port: Int) -> Unit,
     onRefreshClick: () -> Unit,
     onToggleInfoClick: () -> Unit,
 ) {
     var showQrDialog by remember { mutableStateOf(false) }
+    var showScanScreen by remember { mutableStateOf(false) }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(stringResource(R.string.device_details_title)) },
@@ -154,6 +183,16 @@ private fun DeviceContent(
                     Icon(
                         imageVector = Icons.Outlined.QrCode,
                         contentDescription = stringResource(R.string.qr_share_title),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(
+                    onClick = { showScanScreen = true },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.QrCodeScanner,
+                        contentDescription = stringResource(R.string.qr_scan_title),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -241,6 +280,10 @@ private fun DeviceContent(
                     onStatusClick = onStatusClick,
                     onLogsClick = onLogsClick,
                     onShellClick = onShellClick,
+                    onStorageClick = onStorageClick,
+                    onUploadClick = onUploadClick,
+                    onPullClick = onPullClick,
+                    onAdb5555Click = onAdb5555Click,
                 )
             }
 
@@ -289,6 +332,16 @@ private fun DeviceContent(
             }
         }
     }
+    if (showScanScreen) {
+        QrScanScreen(
+            onResult = { host, port ->
+                showScanScreen = false
+                onScanResult(host, port)
+            },
+            onClose = { showScanScreen = false },
+        )
+    }
+    }
 
     if (showQrDialog) {
         val address = uiState.connectionAddress
@@ -326,6 +379,50 @@ private fun DeviceContent(
             },
         )
     }
+
+    if (uiState.storageLoading || uiState.storageOverview != null) {
+        StorageOverviewDialog(
+            loading = uiState.storageLoading,
+            text = uiState.storageOverview,
+            onDismiss = onDismissStorageClick,
+        )
+    }
+}
+
+@Composable
+private fun StorageOverviewDialog(
+    loading: Boolean,
+    text: String?,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.storage_overview_title)) },
+        text = {
+            if (loading) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Text(
+                        text = stringResource(R.string.storage_overview_scanning),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            } else {
+                Text(
+                    text = text.orEmpty(),
+                    fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_confirm))
+            }
+        },
+    )
 }
 
 /** 生成内容为 text 的二维码 Bitmap，失败返回 null。 */
@@ -411,6 +508,10 @@ private fun QuickActionGrid(
     onStatusClick: () -> Unit,
     onLogsClick: () -> Unit,
     onShellClick: () -> Unit,
+    onStorageClick: () -> Unit,
+    onUploadClick: () -> Unit,
+    onPullClick: () -> Unit,
+    onAdb5555Click: () -> Unit,
 ) {
     val shellLabel = stringResource(R.string.nav_shell)
     if (sessionKind == AdbSessionKind.UsbFastboot) {
@@ -448,11 +549,23 @@ private fun QuickActionGrid(
             title = stringResource(R.string.group_files),
             actions = listOf(
                 QuickActionSpec(stringResource(R.string.action_file_manage), Icons.Outlined.FolderOpen, onFilesClick, SharedToolKeys.Files),
+                QuickActionSpec(
+                    label = stringResource(R.string.action_push_to_device),
+                    icon = Icons.Outlined.Upload,
+                    onClick = onUploadClick,
+                ),
+                QuickActionSpec(
+                    label = stringResource(R.string.action_pull_from_device),
+                    icon = Icons.Outlined.Download,
+                    onClick = onPullClick,
+                ),
+                QuickActionSpec(stringResource(R.string.action_storage_overview), Icons.Outlined.Storage, onStorageClick),
             ),
         )
         ActionGroup(
             title = stringResource(R.string.group_system),
             actions = listOf(
+                QuickActionSpec(stringResource(R.string.action_adb_5555), Icons.Outlined.Wifi, onAdb5555Click),
                 QuickActionSpec(stringResource(R.string.action_camera), Icons.Outlined.CameraAlt, onCameraClick),
                 QuickActionSpec(stringResource(R.string.action_gallery), Icons.Outlined.PhotoLibrary, onGalleryClick, SharedToolKeys.Gallery),
                 QuickActionSpec(stringResource(R.string.action_status), Icons.Outlined.Speed, onStatusClick),
@@ -524,6 +637,13 @@ private fun DeviceContentDisconnectedPreview() {
             onStatusClick = {},
             onLogsClick = {},
             onShellClick = {},
+            onUploadClick = {},
+            onPullClick = {},
+            onAdb5555Click = {},
+            onStorageClick = {},
+            onDismissStorageClick = {},
+            onScanQrClick = {},
+            onScanResult = { _, _ -> },
             onRefreshClick = {},
             onToggleInfoClick = {},
         )
@@ -563,6 +683,13 @@ private fun DeviceContentConnectedPreview() {
             onStatusClick = {},
             onLogsClick = {},
             onShellClick = {},
+            onUploadClick = {},
+            onPullClick = {},
+            onAdb5555Click = {},
+            onStorageClick = {},
+            onDismissStorageClick = {},
+            onScanQrClick = {},
+            onScanResult = { _, _ -> },
             onRefreshClick = {},
             onToggleInfoClick = {},
         )

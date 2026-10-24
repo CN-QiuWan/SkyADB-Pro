@@ -35,6 +35,8 @@ interface AdbRepository {
     val selectedDeviceInfo: Flow<DeviceInfo>
     suspend fun connect(host: String, port: Int): AdbOperationResult<String>
     suspend fun connectUsbOtg(deviceName: String): AdbOperationResult<String>
+    /** 让设备 adbd 切换到 TCP 模式监听指定端口（等价于 `adb tcpip <port>`）。 */
+    suspend fun enableTcpIp(port: Int): AdbOperationResult<String>
     suspend fun runFastbootCommand(command: String): AdbOperationResult<String>
     suspend fun pair(host: String, port: Int, pairingCode: String): AdbOperationResult<Unit>
     suspend fun refreshDeviceInfo(): AdbOperationResult<DeviceInfo>
@@ -125,6 +127,11 @@ class DefaultAdbRepository(
             )
         }
         return result.logFailure(DiagnosticModule.WifiAdb, "连接设备", "$host:$port")
+    }
+
+    override suspend fun enableTcpIp(port: Int): AdbOperationResult<String> {
+        return kadbManager.enableTcpIp(port)
+            .logFailure(DiagnosticModule.WifiAdb, "开启 TCP 端口", port.toString())
     }
 
     override suspend fun connectUsbOtg(deviceName: String): AdbOperationResult<String> {

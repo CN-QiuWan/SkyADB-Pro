@@ -29,9 +29,10 @@ const val MirrorDefaultMaxSize = ScrcpyConstants.DefaultMaxSize
  */
 fun parseResolutionSize(resolution: String, fallback: Int): Int {
     if (resolution.isBlank()) return fallback
-    val (w, h) = resolution.split("x", "X", "×", ignoreCase = true, limit = 2)
-    val width = w.trim().toIntOrNull() ?: return fallback
-    val height = h.trim().toIntOrNull() ?: return fallback
+    val parts = resolution.split("x", "X", "×", ignoreCase = true, limit = 2)
+    if (parts.size < 2) return fallback
+    val width = parts[0].trim().toIntOrNull() ?: return fallback
+    val height = parts[1].trim().toIntOrNull() ?: return fallback
     if (width <= 0 || height <= 0) return fallback
     return maxOf(width, height)
 }
@@ -53,15 +54,17 @@ data class CameraQuality(
 /** 解析形如 "1920x1080" 的分辨率字符串的宽度，失败时返回 [fallback]。 */
 fun parseResolutionWidth(resolution: String, fallback: Int): Int {
     if (resolution.isBlank()) return fallback
-    val (w, _) = resolution.split("x", "X", "×", ignoreCase = true, limit = 2)
-    return w.trim().toIntOrNull()?.takeIf { it > 0 } ?: fallback
+    val parts = resolution.split("x", "X", "×", ignoreCase = true, limit = 2)
+    if (parts.size < 2) return fallback
+    return parts[0].trim().toIntOrNull()?.takeIf { it > 0 } ?: fallback
 }
 
 /** 解析形如 "1920x1080" 的分辨率字符串的高度，失败时返回 [fallback]。 */
 fun parseResolutionHeight(resolution: String, fallback: Int): Int {
     if (resolution.isBlank()) return fallback
-    val (_, h) = resolution.split("x", "X", "×", ignoreCase = true, limit = 2)
-    return h.trim().toIntOrNull()?.takeIf { it > 0 } ?: fallback
+    val parts = resolution.split("x", "X", "×", ignoreCase = true, limit = 2)
+    if (parts.size < 2) return fallback
+    return parts[1].trim().toIntOrNull()?.takeIf { it > 0 } ?: fallback
 }
 
 /** 摄像头朝向。 */

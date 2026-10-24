@@ -41,11 +41,16 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.qwadb.app.ui.apps.AppsScreen
 import com.qwadb.app.ui.camera.CameraScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.qwadb.app.ui.device.DeviceScreen
+import com.qwadb.app.ui.device.DeviceViewModel
 import com.qwadb.app.ui.diagnostics.DiagnosticLogScreen
 import com.qwadb.app.ui.discovery.DeviceDiscoveryScreen
 import com.qwadb.app.ui.download.OnlineDownloadScreen
+import com.qwadb.app.ui.files.DeviceFilesScreen
 import com.qwadb.app.ui.files.FileTransferScreen
+import com.qwadb.app.ui.files.UploadScreen
+import com.qwadb.app.ui.storage.StorageOverviewScreen
 import com.qwadb.app.ui.gallery.MediaGalleryScreen
 import com.qwadb.app.ui.home.HomeScreen
 import com.qwadb.app.ui.install.InstallApkScreen
@@ -188,6 +193,8 @@ fun AdbManagerApp() {
                         )
                     }
                     appComposable(AppDestination.Device.route) {
+                        // 与 DeviceScreen 内部的 viewModel() 共用同一导航条目作用域，拿到同一实例。
+                        val deviceViewModel: DeviceViewModel = viewModel()
                         DeviceScreen(
                             bottomPadding = bottomPadding,
                             onMirrorClick = { navController.navigate(MirrorRoute) },
@@ -199,6 +206,10 @@ fun AdbManagerApp() {
                             onInstallClick = { navController.navigate(AppDestination.Install.route) },
                             onDownloadClick = { navController.navigate(AppDestination.Download.route) },
                             onFilesClick = { navController.navigate(AppDestination.Files.route) },
+                            onUploadClick = { navController.navigate(AppDestination.Upload.route) },
+                            onPullClick = { navController.navigate(AppDestination.DeviceFiles.route) },
+                            onStorageOverviewClick = { navController.navigate(AppDestination.StorageOverview.route) },
+                            onAdb5555Click = { deviceViewModel.enableAdbTcpPort(AdbTcpPort) },
                             onScreenshotClick = { navController.navigate(AppDestination.Screenshot.route) },
                             onRemoteClick = { navController.navigate(RemoteRoute) },
                             onStatusClick = { navController.navigate(StatusRoute) },
@@ -281,6 +292,22 @@ fun AdbManagerApp() {
                     appComposable(AppDestination.Files.route, SharedToolKeys.Files) {
                         FileTransferScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
                     }
+                    appComposable(AppDestination.DeviceFiles.route) {
+                        DeviceFilesScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(AppDestination.Upload.route) {
+                        UploadScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(AppDestination.StorageOverview.route) {
+                        StorageOverviewScreen(
+                            bottomPadding = bottomPadding,
+                            onBackClick = { navController.popBackStack() },
+                            onOpenCategory = { path ->
+                                com.qwadb.app.ui.files.DeviceFilesLaunchIntent.request(path)
+                                navController.navigate(AppDestination.DeviceFiles.route)
+                            },
+                        )
+                    }
                     appComposable(AppDestination.Screenshot.route, SharedToolKeys.Screenshot) {
                         ScreenshotScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
                     }
@@ -336,6 +363,9 @@ private sealed class AppDestination(
     data object Download : AppDestination("download", R.string.nav_download, Icons.Outlined.PhoneAndroid)
     data object Install : AppDestination("install", R.string.nav_install, Icons.Outlined.PhoneAndroid)
     data object Files : AppDestination("files", R.string.nav_files, Icons.Outlined.PhoneAndroid)
+    data object DeviceFiles : AppDestination("device_files", R.string.nav_files, Icons.Outlined.PhoneAndroid)
+    data object Upload : AppDestination("upload", R.string.nav_files, Icons.Outlined.PhoneAndroid)
+    data object StorageOverview : AppDestination("storage_overview", R.string.nav_files, Icons.Outlined.PhoneAndroid)
     data object Screenshot : AppDestination("screenshot", R.string.nav_screenshot, Icons.Outlined.PhoneAndroid)
 }
 
@@ -344,6 +374,9 @@ private const val DiscoveryPortKey = "discovery_port"
 private const val PairingHostKey = "pairing_host"
 private const val PairingPortKey = "pairing_port"
 private const val LogsRoute = "logs"
+
+/** 一键开启的无线 ADB 常连端口。 */
+private const val AdbTcpPort = 5555
 private const val RemoteRoute = "remote"
 private const val MirrorRoute = "mirror"
 private const val WatchRoute = "watch"

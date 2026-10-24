@@ -22,6 +22,9 @@ private val Context.appSettingsDataStore by preferencesDataStore(name = "app_set
 /** 码率以 Mbps 存储，内部使用时转换为 bps（* 1_000_000）。 */
 const val BitrateMbpsToBps = 1_000_000
 
+/** 列表型设置的分隔符（单元分隔符，命令中几乎不会出现）。 */
+private const val ListSeparator = "\u001F"
+
 data class AppSettings(
     val defaultPort: Int = 5555,
     val connectionTimeoutSeconds: Int = 10,
@@ -37,6 +40,8 @@ data class AppSettings(
     val cameraFps: Int = 30,
     val cameraBitrateMbps: Int = 4,
     val statusRefreshIntervalMs: Int = 5000,
+    val shellHistory: List<String> = emptyList(),
+    val shellFavorites: List<String> = emptyList(),
 ) {
     val mirrorCustomMaxSize: Int
         get() = parseResolutionSize(mirrorCustomResolution, MirrorDefaultMaxSize)
@@ -77,6 +82,8 @@ class AppSettingsStore(context: Context) {
                 cameraFps = preferences[Keys.CameraFps] ?: 30,
                 cameraBitrateMbps = preferences[Keys.CameraBitrateMbps] ?: 4,
                 statusRefreshIntervalMs = preferences[Keys.StatusRefreshIntervalMs] ?: 5000,
+                shellHistory = decodeList(preferences[Keys.ShellHistory]),
+                shellFavorites = decodeList(preferences[Keys.ShellFavorites]),
             )
         }
 
@@ -164,6 +171,26 @@ class AppSettingsStore(context: Context) {
         }
     }
 
+    suspend fun updateShellHistory(items: List<String>) {
+        dataStore.edit { preferences ->
+            preferences[Keys.ShellHistory] = encodeList(items)
+        }
+    }
+
+    suspend fun updateShellFavorites(items: List<String>) {
+        dataStore.edit { preferences ->
+            preferences[Keys.ShellFavorites] = encodeList(items)
+        }
+    }
+
+    private fun encodeList(items: List<String>): String = items.joinToString(ListSeparator)
+
+    private fun decodeList(raw: String?): List<String> =
+        raw?.takeIf { it.isNotEmpty() }
+            ?.split(ListSeparator)
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
+
     private object Keys {
         val DefaultPort = intPreferencesKey("default_port")
         val ConnectionTimeoutSeconds = intPreferencesKey("connection_timeout_seconds")
@@ -179,5 +206,7 @@ class AppSettingsStore(context: Context) {
         val CameraFps = intPreferencesKey("camera_fps")
         val CameraBitrateMbps = intPreferencesKey("camera_bitrate_mbps")
         val StatusRefreshIntervalMs = intPreferencesKey("status_refresh_interval_ms")
+        val ShellHistory = stringPreferencesKey("shell_history")
+        val ShellFavorites = stringPreferencesKey("shell_favorites")
     }
 }

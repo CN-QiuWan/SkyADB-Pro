@@ -1,5 +1,8 @@
 package com.qwadb.app.ui.shell
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -20,7 +23,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AssistChip
@@ -37,11 +42,17 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import com.qwadb.app.ui.components.AppTopBar as TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.delay
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -183,6 +194,14 @@ private fun ShellCommandCard(
 
 @Composable
 private fun ShellOutputCard(output: String) {
+    val context = LocalContext.current
+    var copied by remember(output) { mutableStateOf(false) }
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(1500)
+            copied = false
+        }
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(AppDimens.CardRadius),
@@ -192,7 +211,31 @@ private fun ShellOutputCard(output: String) {
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(title = stringResource(R.string.shell_output_title))
+            SectionHeader(
+                title = stringResource(R.string.shell_output_title),
+                trailing = if (output.isNotBlank()) {
+                    @Composable {
+                        IconButton(
+                            onClick = {
+                                copyShellText(context, output)
+                                copied = true
+                            },
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Icon(
+                                imageVector = if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
+                                contentDescription = stringResource(
+                                    if (copied) R.string.shell_output_copied else R.string.shell_copy_output,
+                                ),
+                                modifier = Modifier.size(18.dp),
+                                tint = if (copied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
+            )
             if (output.isBlank()) {
                 EmptyState(title = stringResource(R.string.shell_no_output))
             } else {
@@ -213,6 +256,11 @@ private fun ShellOutputCard(output: String) {
             }
         }
     }
+}
+
+private fun copyShellText(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+    clipboard.setPrimaryClip(ClipData.newPlainText("shell_output", text))
 }
 
 @Composable

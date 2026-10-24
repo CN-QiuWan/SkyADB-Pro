@@ -76,7 +76,7 @@
     <string name="settings_clear_recent_devices_desc">移除连接历史</string>
     <string name="settings_project_url_title">项目地址</string>
     <string name="settings_contact_title">联系方式</string>
-    <string name="settings_contact_desc">QQ：3948501479</string>
+    <string name="settings_contact_desc">3948501479@qq.com</string>
     <string name="settings_status_refresh_title">状态刷新间隔</string>
     <string name="settings_status_refresh_desc">系统状态更新间隔（500-10000ms）</string>
     <string name="settings_status_refresh_required">请输入刷新间隔</string>
@@ -262,6 +262,8 @@
     <string name="shell_command_placeholder">例如 getprop ro.product.model</string>
     <string name="action_execute">执行命令</string>
     <string name="shell_output_title">输出结果</string>
+    <string name="shell_copy_output">复制输出</string>
+    <string name="shell_output_copied">已复制</string>
     <string name="shell_no_output">暂无输出</string>
     <string name="shell_history_title">历史命令</string>
     <string name="shell_no_history">暂无历史命令</string>
@@ -467,6 +469,8 @@
     <string name="kadb_app_enable_failed">启用应用失败</string>
     <string name="kadb_app_disable_failed">冻结应用失败</string>
     <string name="kadb_app_toggle_suggestion">请确认包名正确，且设备允许修改该应用状态。</string>
+    <string name="kadb_app_toggle_not_effective">命令已返回成功，但设备实际状态未改变</string>
+    <string name="kadb_app_toggle_not_effective_suggestion">设备（或其厂商 ROM）静默忽略了该命令。常见于部分厂商的系统应用或受保护组件。可尝试在系统设置中冻结，或使用 device-owner / root 方式。</string>
     <string name="kadb_apk_export_failed">导出 APK 失败</string>
     <string name="kadb_apk_export_check_exist_suggestion">请确认应用存在，并保持设备连接。</string>
     <string name="kadb_apk_export_single_only_suggestion">仅支持导出单 APK 应用，请确认应用存在且不是拆分安装包。</string>
@@ -923,7 +927,7 @@
     <!-- 遥控器自定义按键 -->
     <string name="remote_custom_keys_title">自定义按键</string>
     <string name="remote_add_custom_key">添加自定义按键</string>
-    <string name="remote_custom_key_hint">用逗号分隔按键名，例如 HOME,HOME 或 POWER,VOLUME_DOWN</string>
+    <string name="remote_custom_key_hint">用逗号分隔按键，支持 KEYCODE_HOME、HOME 或数字键码（如 3）。例如 HOME,HOME 或 POWER,VOLUME_DOWN</string>
     <string name="remote_custom_key_label">自定义按键</string>
     <string name="remote_custom_key_saved">自定义按键已保存</string>
     <string name="remote_custom_key_invalid">按键名称或组合无效</string>
@@ -953,4 +957,72 @@
     <string name="download_file_exists">文件已存在，是否继续下载？</string>
     <string name="download_file_exists_yes">继续</string>
     <string name="download_file_exists_no">重新下载</string>
+
+    <!-- 一键开启 5555 无线 ADB 常连端口 (1.0.1) -->
+    <string name="action_adb_5555">ADB5555</string>
+    <string name="adb_5555_desc">开启设备 5555 无线 ADB 常连端口</string>
+    <string name="adb_5555_running">正在开启设备 %1$d 端口\u2026</string>
+    <string name="adb_5555_reconnecting">adbd 正在重启，正在自动连接 %1$s\u2026</string>
+    <string name="adb_5555_success">%2$d 端口已开启，已自动连接到 %1$s</string>
+    <string name="adb_5555_triggered">指令已下发，自动重连未成功，请手动连接 %1$s</string>
+    <string name="adb_5555_connect_first">请先连接设备</string>
+    <string name="adb_5555_no_ip">指令已下发，但未能获取设备 IP，请用设备 IP:%1$d 手动连接</string>
+    <string name="adb_5555_switch_failed">切换设备到 TCP 模式失败</string>
+
+    <!-- 文件快捷操作 (1.0.1) -->
+    <string name="action_push_to_device">上传到设备</string>
+    <string name="action_pull_from_device">从设备拉取</string>
+    <string name="action_storage_overview">存储空间</string>
+
+    <!-- 存储空间概览 -->
+    <string name="storage_overview_title">存储空间概览</string>
+    <string name="storage_overview_empty">暂无存储信息</string>
+    <string name="storage_overview_scanning">正在读取存储信息\u2026</string>
+
+    <!-- 扫码配对 (1.0.1) -->
+    <string name="qr_scan_title">扫码连接</string>
+    <string name="qr_scan_desc">将相机对准被分享的连接二维码</string>
+    <string name="qr_scan_permission_title">需要相机权限</string>
+    <string name="qr_scan_permission_message">扫描连接二维码需要使用相机。</string>
+    <string name="qr_scan_permission_denied">相机权限被拒绝</string>
+    <string name="qr_scan_invalid">不是有效的连接二维码</string>
+    <string name="qr_scan_close">关闭</string>
+    <string name="qr_scan_connecting">正在连接 %1$s\u2026</string>
+    <string name="qr_scan_connect_success">已连接 %1$s</string>
+
+    <!-- 存储空间概览（1.0.1 重做） -->
+    <string name="storage_section_user">用户数据</string>
+    <string name="storage_of_total_format">/ %1$s</string>
+    <string name="storage_free_format">剩余 %1$s</string>
+    <string name="storage_cat_images">图片</string>
+    <string name="storage_cat_videos">视频</string>
+    <string name="storage_cat_audio">音频</string>
+    <string name="storage_cat_documents">文档</string>
+    <string name="storage_cat_downloads">下载</string>
+    <string name="storage_cat_apk">安装包</string>
+    <string name="storage_cat_archives">压缩包</string>
+    <string name="storage_cat_other">其他文件</string>
+
+    <!-- 设备文件 / 拉取（1.0.1） -->
+    <string name="device_files_title">从设备拉取</string>
+    <string name="device_files_up">上一级</string>
+    <string name="device_files_empty">空文件夹</string>
+    <string name="device_files_select_first">请先选择文件</string>
+    <string name="device_files_pull_selected">拉取所选（%1$d）</string>
+    <string name="device_files_pulling">正在拉取\u2026</string>
+    <string name="device_files_pull_done">已拉取 %1$d 个文件到 Download</string>
+    <string name="device_files_pull_partial">成功 %1$d 个，失败 %2$d 个</string>
+
+    <!-- 上传到设备（1.0.1） -->
+    <string name="upload_title">上传到设备</string>
+    <string name="upload_subtitle">文件将保存到 /sdcard/Uploads</string>
+    <string name="upload_pick">从本机选择文件</string>
+    <string name="upload_no_items">尚未选择文件</string>
+    <string name="upload_state_pending">待上传</string>
+    <string name="upload_state_uploading">上传中\u2026</string>
+    <string name="upload_state_done">完成</string>
+    <string name="upload_state_failed">失败</string>
+    <string name="upload_done">已上传 %1$d 个文件</string>
+    <string name="upload_partial">成功 %1$d 个，失败 %2$d 个</string>
+
 </resources>

@@ -151,6 +151,39 @@ class KadbManager {
         }
     }
 
+    /**
+     * 以主机命令方式让设备 adbd 切换到 TCP 模式并监听指定端口，等价于 `adb tcpip <port>`。
+     *
+     * 这是开启固定端口的标准做法，适用于所有 Android 版本；
+     * 相比 `setprop service.adb.tcp.port`（Android 11+ 常被忽略）更可靠。
+     * 切换成功后设备会断开当前会话，调用方需自行等待并重连。
+     */
+    suspend fun enableTcpIp(port: Int): AdbOperationResult<String> = withContext(Dispatchers.IO) {
+        val kadb = activeKadb
+            ?: return@withContext AdbOperationResult.Failure(
+                message = appString(R.string.kadb_not_connected),
+                suggestion = appString(R.string.adb_5555_connect_first),
+            )
+        runCatching {
+            val stream = kadb.open("tcpip:$port")
+            val reply = try {
+                stream.source.readUtf8()
+            } catch (_: Throwable) {
+                // adbd 切模式后会立即断开，读不到回复属正常
+                ""
+            } finally {
+                runCatching { stream.close() }
+            }
+            AdbOperationResult.Success(reply)
+        }.getOrElse { error ->
+            AdbOperationResult.Failure(
+                message = appString(R.string.adb_5555_switch_failed),
+                suggestion = error.message.orEmpty(),
+                cause = error,
+            )
+        }
+    }
+
     suspend fun pair(
         host: String,
         port: Int,
@@ -323,16 +356,43 @@ class KadbManager {
         when (val result = shell(command)) {
             is AdbOperationResult.Failure -> result
             is AdbOperationResult.Success -> {
-                if (result.data.exitCode == 0) {
-                    AdbOperationResult.Success(Unit)
-                } else {
+                if (result.data.exitCode != 0) {
                     AdbOperationResult.Failure(
                         message = appString(if (enabled) R.string.kadb_app_enable_failed else R.string.kadb_app_disable_failed),
                         suggestion = result.data.errorOutput.ifBlank { appString(R.string.kadb_app_toggle_suggestion) },
                     )
+                } else {
+                    // 命令返回成功，但部分 OEM ROM 会静默忽略 pm disable-user，
+                    // 因此回查设备真实状态；若实际状态与预期不符，如实报告而非假装成功。
+                    when (val verified = verifyAppEnabled(packageName, enabled)) {
+                        is AdbOperationResult.Failure -> verified
+                        is AdbOperationResult.Success -> {
+                            if (verified.data) {
+                                AdbOperationResult.Success(Unit)
+                            } else {
+                                AdbOperationResult.Failure(
+                                    message = appString(R.string.kadb_app_toggle_not_effective),
+                                    suggestion = appString(R.string.kadb_app_toggle_not_effective_suggestion),
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    /**
+     * 校验单个应用的启用状态是否与预期一致（与 [listApps] 判定方式保持一致：
+     * 包名不在 `pm list packages -d` 结果中即为已启用）。
+     * 若校验命令本身执行失败，保守返回一致（true），避免误报成功为失败。
+     */
+    private suspend fun verifyAppEnabled(packageName: String, wantEnabled: Boolean): AdbOperationResult<Boolean> {
+        val result = shell("pm list packages -d")
+        if (result !is AdbOperationResult.Success) return AdbOperationResult.Success(true)
+        val disabledPackages = parsePackageNames(result.data.output).toSet()
+        val isEnabled = packageName !in disabledPackages
+        return AdbOperationResult.Success(isEnabled == wantEnabled)
     }
 
     suspend fun exportAppApk(packageName: String, localFile: File): AdbOperationResult<File> = withContext(Dispatchers.IO) {

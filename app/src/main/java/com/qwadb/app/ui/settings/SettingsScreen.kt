@@ -469,7 +469,7 @@ private fun SettingsContent(
 }
 
 private const val ProjectUrl = "https://github.com/CN-QiuWan/SkyADB-Pro"
-private const val ContactEmail = "qiuwanup@gmail.com"
+private const val ContactEmail = "3948501479@qq.com"
 
 /** 画质参数输入项：标签 + 说明 + 输入框。 */
 @Composable

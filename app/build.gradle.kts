@@ -69,6 +69,11 @@ dependencies {
 
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
+    // 二维码扫码配对连接
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material.icons.extended)

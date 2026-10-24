@@ -152,12 +152,22 @@ class RemoteControlViewModel(
         }
     }
 
-    /** Maps a key name (case-insensitive, e.g. "HOME") to its KeyEvent keycode, or null if unknown. */
+    /**
+     * 解析用户输入的按键名称，返回 KeyEvent keycode，无法识别时返回 null。
+     * 兼容三种写法：[KEYCODE_HOME] / [HOME] / 数字键码（如 3），大小写不敏感。
+     * 不再依赖枚举 name，避免 R8 混淆后匹配失效。
+     */
     fun parseKeyCode(name: String): Int? {
-        val key = RemoteKey.entries.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) }
+        val token = name.trim()
+        if (token.isEmpty()) return null
+        // 直接输入数字键码
+        token.toIntOrNull()?.let { if (it >= 0) return it }
+        val normalized = token.uppercase(Locale.ROOT)
+        val field = KeycodeLookup[normalized]
+            ?: KeycodeLookup[normalized.replace("_", "")]
             ?: return null
         return runCatching {
-            KeyEvent::class.java.getField(key.keyCode).getInt(null)
+            KeyEvent::class.java.getField(field).getInt(null)
         }.getOrNull()
     }
 
@@ -171,6 +181,18 @@ class RemoteControlViewModel(
     private companion object {
         const val MaxCustomKeys = 10
         const val KeySendDelayMillis = 100L
+
+        /** 归一化按键名 -> KeyEvent 静态字段名，如 HOME / KEYCODE_HOME -> KEYCODE_HOME。 */
+        val KeycodeLookup: Map<String, String> = buildMap {
+            RemoteKey.entries.forEach { key ->
+                val full = key.keyCode.uppercase(Locale.ROOT) // KEYCODE_HOME
+                val short = full.removePrefix("KEYCODE_") // HOME
+                put(full, key.keyCode)
+                put(short, key.keyCode)
+                put(full.replace("_", ""), key.keyCode) // KEYCODEHOME
+                put(short.replace("_", ""), key.keyCode) // HOME / VOLUMEUP
+            }
+        }
     }
 }
 

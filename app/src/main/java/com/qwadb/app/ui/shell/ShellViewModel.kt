@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.qwadb.app.AppServices
 import com.qwadb.app.R
 import com.qwadb.app.adb.AdbSessionKind
+import com.qwadb.app.data.AppSettingsStore
 import com.qwadb.app.i18n.appString
 import com.qwadb.app.model.AdbOperationResult
 import com.qwadb.app.model.OperationStatus
@@ -12,6 +13,7 @@ import com.qwadb.app.repository.AdbRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 data class ShellUiState(
@@ -25,9 +27,20 @@ data class ShellUiState(
 
 class ShellViewModel(
     private val adbRepository: AdbRepository = AppServices.adbRepository,
+    private val settingsStore: AppSettingsStore = AppServices.settingsStore,
 ) : ViewModel() {
     private val state = MutableStateFlow(ShellUiState())
     val uiState: StateFlow<ShellUiState> = state.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val stored = settingsStore.settings.first()
+            state.value = state.value.copy(
+                history = stored.shellHistory,
+                favorites = stored.shellFavorites,
+            )
+        }
+    }
 
     fun onCommandChanged(value: String) {
         state.value = state.value.copy(
@@ -44,18 +57,20 @@ class ShellViewModel(
     fun toggleFavorite(command: String) {
         val trimmed = command.trim()
         if (trimmed.isBlank()) return
-        val current = state.value.favorites
-        state.value = if (trimmed in current) {
-            state.value.copy(
-                favorites = current - trimmed,
-                operationStatus = OperationStatus.Success(appString(R.string.shell_favorite_removed)),
-            )
+        val current = state.value
+        val isFavorite = trimmed in current.favorites
+        val newFavorites = if (isFavorite) {
+            current.favorites - trimmed
         } else {
-            state.value.copy(
-                favorites = (current + trimmed).distinct().take(20),
-                operationStatus = OperationStatus.Success(appString(R.string.shell_favorite_added)),
-            )
+            (current.favorites + trimmed).distinct().take(20)
         }
+        state.value = current.copy(
+            favorites = newFavorites,
+            operationStatus = OperationStatus.Success(
+                appString(if (isFavorite) R.string.shell_favorite_removed else R.string.shell_favorite_added),
+            ),
+        )
+        viewModelScope.launch { settingsStore.updateShellFavorites(newFavorites) }
     }
 
     fun onFavoriteClick(command: String) {
@@ -113,12 +128,14 @@ class ShellViewModel(
     }
 
     private fun applySuccess(command: String, output: String, exitCode: Int) {
+        val newHistory = (listOf(command) + state.value.history).distinct().take(20)
         state.value = state.value.copy(
             output = output,
-            history = (listOf(command) + state.value.history).distinct().take(20),
+            history = newHistory,
             executeEnabled = true,
             operationStatus = OperationStatus.Success(appString(R.string.shell_execute_success, exitCode)),
         )
+        viewModelScope.launch { settingsStore.updateShellHistory(newHistory) }
     }
 
     private fun applyFailure(result: AdbOperationResult.Failure) {

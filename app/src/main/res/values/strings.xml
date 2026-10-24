@@ -76,7 +76,7 @@
     <string name="settings_clear_recent_devices_desc">Remove connection history</string>
     <string name="settings_project_url_title">Project URL</string>
     <string name="settings_contact_title">Contact</string>
-    <string name="settings_contact_desc">qiuwanup@gmail.com</string>
+    <string name="settings_contact_desc">3948501479@qq.com</string>
     <string name="settings_status_refresh_title">Status refresh interval</string>
     <string name="settings_status_refresh_desc">Update interval for system status (500-10000ms)</string>
     <string name="settings_status_refresh_required">Enter the refresh interval</string>
@@ -262,6 +262,8 @@
     <string name="shell_command_placeholder">e.g. getprop ro.product.model</string>
     <string name="action_execute">Execute</string>
     <string name="shell_output_title">Output</string>
+    <string name="shell_copy_output">Copy output</string>
+    <string name="shell_output_copied">Copied</string>
     <string name="shell_no_output">No output yet</string>
     <string name="shell_history_title">Command history</string>
     <string name="shell_no_history">No command history</string>
@@ -467,6 +469,8 @@
     <string name="kadb_app_enable_failed">Failed to enable the app</string>
     <string name="kadb_app_disable_failed">Failed to disable the app</string>
     <string name="kadb_app_toggle_suggestion">Make sure the package name is correct and the device allows changing this app\'s state.</string>
+    <string name="kadb_app_toggle_not_effective">Operation reported success but the device state did not change</string>
+    <string name="kadb_app_toggle_not_effective_suggestion">The device (or its ROM) silently ignored the command. This often happens with system apps or protected components on some manufacturers. Try freezing via the system settings, or use a device-owner / root method.</string>
     <string name="kadb_apk_export_failed">Failed to export the APK</string>
     <string name="kadb_apk_export_check_exist_suggestion">Make sure the app exists and the device stays connected.</string>
     <string name="kadb_apk_export_single_only_suggestion">Only single-APK apps can be exported. Make sure the app exists and isn\'t a split package.</string>
@@ -923,7 +927,7 @@
     <!-- Remote control custom keys -->
     <string name="remote_custom_keys_title">Custom keys</string>
     <string name="remote_add_custom_key">Add custom key</string>
-    <string name="remote_custom_key_hint">Comma-separated key names, e.g. HOME,HOME or POWER,VOLUME_DOWN</string>
+    <string name="remote_custom_key_hint">Comma-separated keys. Accepts KEYCODE_HOME, HOME, or a numeric code such as 3. e.g. HOME,HOME or POWER,VOLUME_DOWN</string>
     <string name="remote_custom_key_label">Custom key</string>
     <string name="remote_custom_key_saved">Custom key saved</string>
     <string name="remote_custom_key_invalid">Invalid key name or sequence</string>
@@ -953,4 +957,72 @@
     <string name="download_file_exists">File already exists, resume?</string>
     <string name="download_file_exists_yes">Resume</string>
     <string name="download_file_exists_no">Restart</string>
+
+    <!-- One-tap ADB TCP port 5555 (1.0.1) -->
+    <string name="action_adb_5555">ADB5555</string>
+    <string name="adb_5555_desc">Enable persistent wireless ADB on port 5555</string>
+    <string name="adb_5555_running">Opening port %1$d on the device\u2026</string>
+    <string name="adb_5555_reconnecting">adbd is restarting, auto-connecting to %1$s\u2026</string>
+    <string name="adb_5555_success">Port %2$d enabled, auto-connected to %1$s</string>
+    <string name="adb_5555_triggered">Command sent but auto-reconnect failed, connect manually to %1$s</string>
+    <string name="adb_5555_connect_first">Connect to a device first</string>
+    <string name="adb_5555_no_ip">Command sent, but the device IP could not be resolved. Connect manually via device IP:%1$d</string>
+    <string name="adb_5555_switch_failed">Failed to switch the device to TCP mode</string>
+
+    <!-- File quick actions (1.0.1) -->
+    <string name="action_push_to_device">Push files</string>
+    <string name="action_pull_from_device">Pull files</string>
+    <string name="action_storage_overview">Storage</string>
+
+    <!-- Storage overview -->
+    <string name="storage_overview_title">Storage overview</string>
+    <string name="storage_overview_empty">No storage information available</string>
+    <string name="storage_overview_scanning">Reading storage information\u2026</string>
+
+    <!-- QR scan pairing (1.0.1) -->
+    <string name="qr_scan_title">Scan to connect</string>
+    <string name="qr_scan_desc">Point the camera at a shared connection QR code</string>
+    <string name="qr_scan_permission_title">Camera permission required</string>
+    <string name="qr_scan_permission_message">Camera access is needed to scan the connection QR code.</string>
+    <string name="qr_scan_permission_denied">Camera permission denied</string>
+    <string name="qr_scan_invalid">Not a valid connection QR code</string>
+    <string name="qr_scan_close">Close</string>
+    <string name="qr_scan_connecting">Connecting to %1$s\u2026</string>
+    <string name="qr_scan_connect_success">Connected to %1$s</string>
+
+    <!-- Storage overview (1.0.1 revamp) -->
+    <string name="storage_section_user">User data</string>
+    <string name="storage_of_total_format">/ %1$s</string>
+    <string name="storage_free_format">%1$s free</string>
+    <string name="storage_cat_images">Images</string>
+    <string name="storage_cat_videos">Videos</string>
+    <string name="storage_cat_audio">Audio</string>
+    <string name="storage_cat_documents">Documents</string>
+    <string name="storage_cat_downloads">Downloads</string>
+    <string name="storage_cat_apk">Installers</string>
+    <string name="storage_cat_archives">Archives</string>
+    <string name="storage_cat_other">Other files</string>
+
+    <!-- Device files / pull (1.0.1) -->
+    <string name="device_files_title">Pull from device</string>
+    <string name="device_files_up">Up</string>
+    <string name="device_files_empty">Empty folder</string>
+    <string name="device_files_select_first">Select a file first</string>
+    <string name="device_files_pull_selected">Pull selected (%1$d)</string>
+    <string name="device_files_pulling">Pulling\u2026</string>
+    <string name="device_files_pull_done">Pulled %1$d file(s) to Download</string>
+    <string name="device_files_pull_partial">Pulled %1$d, failed %2$d</string>
+
+    <!-- Upload to device (1.0.1) -->
+    <string name="upload_title">Upload to device</string>
+    <string name="upload_subtitle">Files are saved to /sdcard/Uploads</string>
+    <string name="upload_pick">Choose files from this phone</string>
+    <string name="upload_no_items">No files selected</string>
+    <string name="upload_state_pending">Pending</string>
+    <string name="upload_state_uploading">Uploading\u2026</string>
+    <string name="upload_state_done">Done</string>
+    <string name="upload_state_failed">Failed</string>
+    <string name="upload_done">Uploaded %1$d file(s)</string>
+    <string name="upload_partial">Uploaded %1$d, failed %2$d</string>
+
 </resources>

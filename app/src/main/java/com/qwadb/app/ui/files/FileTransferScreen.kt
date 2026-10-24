@@ -101,7 +101,12 @@ fun FileTransferScreen(
         viewModel.onStoragePermissionResult()
     }
 
+    // 快捷操作入口（上传/拉取）指定的默认激活侧栏，仅首次进入时生效一次。
+    val initialPane = remember { FilesLaunchIntent.consume() }
     LaunchedEffect(Unit) {
+        if (initialPane != null) {
+            viewModel.setActivePane(initialPane)
+        }
         viewModel.onStoragePermissionResult()
         viewModel.refreshAll()
     }

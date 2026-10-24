@@ -58,65 +58,97 @@ SkyADB-Pro is an optimized and improved version of SkyADB, designed for fast and
 
 ## 效果展示 / Screenshots
 
-> 说明：以下截图展示核心界面。1.0.1 新增的「扫码连接」「上传到设备 / 从设备拉取 / 存储空间」「ADB5555」等功能在截图中尚未体现，请以功能清单与实机表现为准。
-
 ### 设备连接 / Device Connection
 
 手动连接（IP + 端口）、无线配对、发现设备、USB OTG 与最近设备管理。
 
 <p align="center">
-  <img src="效果展示图/设备连接展示.png" alt="设备连接" width="260">
+  <img src="效果展示图/设备连接展示.jpg" alt="设备连接" width="260">
 </p>
 
-### 功能菜单 / Function Menu
+### 设备详情与功能入口 / Device & Tools
 
-控制模式、观看模式、截图、遥控器、应用管理、本机应用、安装 APK、在线下载、文件管理、上传到设备、从设备拉取、存储空间、ADB5555、查看摄像头、媒体库、系统状态、系统日志、Shell 等入口。
+设备详情页汇集文件管理、上传到设备、从设备拉取、存储空间，以及 ADB5555、查看摄像头、媒体库、系统状态、系统日志、Shell 等快捷入口；下方展示品牌、型号、Android 版本、SDK、ABI、分辨率等系统信息。
 
 <p align="center">
-  <img src="效果展示图/功能菜单上半区.png" alt="功能菜单上半区" width="260">
-  <img src="效果展示图/功能菜单下半区.png" alt="功能菜单下半区" width="260">
+  <img src="效果展示图/设备详情功能入口.jpg" alt="设备详情与功能入口" width="260">
+  <img src="效果展示图/设备详情系统信息.jpg" alt="设备系统信息" width="260">
 </p>
 
 ### 屏幕镜像 / Screen Mirror
 
-控制模式实时镜像目标设备屏幕，支持沉浸效果展示与遥控操作。
+控制模式实时镜像目标设备屏幕，支持远程触控与底部按键（返回 / 主页 / 最近 / 电源 / 音量 / 音频 / 隐私屏）；观看模式仅查看画面。
 
 <p align="center">
-  <img src="效果展示图/屏幕镜像画面展示.png" alt="屏幕镜像画面展示" width="260">
-  <img src="效果展示图/屏幕镜像沉浸效果展示.png" alt="屏幕镜像沉浸效果展示" width="260">
+  <img src="效果展示图/屏幕镜像控制模式.jpg" alt="屏幕镜像-控制模式" width="260">
+  <img src="效果展示图/屏幕镜像观看模式.jpg" alt="屏幕镜像-观看模式" width="260">
+</p>
+
+### 虚拟遥控器 / Remote
+
+常用操作、方向键、音量与媒体控制，适合电视、盒子等无触控设备。
+
+<p align="center">
+  <img src="效果展示图/虚拟遥控器.jpg" alt="虚拟遥控器" width="260">
+</p>
+
+### 应用管理 / Apps
+
+应用列表与搜索，支持启动 / 停止 / 启用 / 导出 / 卸载，以及冻结 / 解冻（列表标记状态）。
+
+<p align="center">
+  <img src="效果展示图/应用管理.jpg" alt="应用管理" width="260">
+</p>
+
+### 文件管理 / Files
+
+浏览设备目录、上传、下载、新建、删除（含删除确认）；从设备拉取支持多选批量拉取到本机；存储空间按图片 / 视频 / 音频 / 文档 / 安装包 / 下载分类概览占用。
+
+<p align="center">
+  <img src="效果展示图/文件管理.jpg" alt="文件管理" width="260">
+  <img src="效果展示图/从设备拉取.jpg" alt="从设备拉取" width="260">
+  <img src="效果展示图/存储空间.jpg" alt="存储空间概览" width="260">
+</p>
+
+### 查看摄像头 / Camera
+
+选择后置 / 前置摄像头并开始查看目标设备画面。
+
+<p align="center">
+  <img src="效果展示图/查看摄像头.jpg" alt="查看摄像头" width="260">
 </p>
 
 ### 系统状态 / System Status
 
-网络、电池、存储、CPU、内存、屏幕亮度、系统时间、当前运行应用与应用进程列表。
+网络、电池、存储、CPU、内存、屏幕亮度、系统时间、当前运行应用与应用 / 系统进程列表实时监控。
 
 <p align="center">
-  <img src="效果展示图/系统状态功能展示.png" alt="系统状态功能展示" width="260">
+  <img src="效果展示图/系统状态.jpg" alt="系统状态" width="260">
 </p>
 
-### Shell 命令 / Shell Command
+### Shell / Shell Command
 
-执行 Shell 命令并查看输出结果与历史命令。
+执行 Shell 命令并查看输出与退出码，输出支持一键复制，命令支持收藏与历史记录。
 
 <p align="center">
-  <img src="效果展示图/Shell 命令功能展示.png" alt="Shell 命令功能展示" width="260">
+  <img src="效果展示图/Shell命令.jpg" alt="Shell 命令" width="260">
 </p>
 
 ### 设置 / Settings
 
-连接参数、镜像画质、摄像头画质、状态刷新间隔、主题模式、语言等。
+连接参数（默认端口 / 连接超时 / 命令超时 / 扫描网段）、镜像与摄像头画质（流畅 / 均衡 / 高清 / 自定义）、状态刷新间隔、主题模式、语言、检查更新、诊断日志、清理最近设备、项目地址与联系方式。
 
 <p align="center">
-  <img src="效果展示图/设置上半区展示.png" alt="设置上半区展示" width="260">
-  <img src="效果展示图/设置下半区展示.png" alt="设置下半区展示" width="260">
-  <img src="效果展示图/其他设置.png" alt="其他设置" width="260">
+  <img src="效果展示图/设置连接参数.jpg" alt="设置-连接参数" width="260">
+  <img src="效果展示图/设置镜像画质.jpg" alt="设置-镜像与摄像头画质" width="260">
+  <img src="效果展示图/设置其他.jpg" alt="设置-其他" width="260">
 </p>
 
 ## 下载 / Download
 
-- **SkyADB-Pro-v1.0.1-release.apk**：可前往 Releases 页面获取最新版本。
+- **SkyADB-Pro-1.0.1-release.apk**：可前往 Releases 页面获取最新版本。
 - 安全校验码：
-  SkyADB-Pro-v1.0.1-release.apk
+  SkyADB-Pro-1.0.1-release.apk
   SHA-256: f1389f838851df84e522b9395cfdbfceb0c42361a0508ce7346c93cc30f6c856
 
 scrcpy-server-v4.1 (assets/scrcpy/)
